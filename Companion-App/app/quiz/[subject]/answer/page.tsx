@@ -22,22 +22,39 @@ export default async function AnswerBreakdown({
   if (!question) redirect(`/quiz/${encodeURIComponent(subject)}`);
 
   const correct = selected === question.correct_option;
+  const optionText: Record<string, string> = {
+    A: question.option_a,
+    B: question.option_b,
+    C: question.option_c,
+    D: question.option_d,
+  };
 
   return (
     <div>
       <h1>{correct ? "Correct" : "Not quite"}</h1>
 
-      <h3>5-step strategy</h3>
-      <ol>
-        <li>{question.strategy_1_understand}</li>
-        <li>{question.strategy_2_remove_distractors}</li>
-        <li>{question.strategy_3_identify_correct}</li>
-        <li>{question.strategy_4_eliminate_incorrect}</li>
-        {question.strategy_5_framework !== "none" && <li>Framework: {question.strategy_5_framework}</li>}
-      </ol>
+      <p>Your answer: {selected}. {optionText[selected as string]}</p>
+      <p>Correct answer: {question.correct_option}. {optionText[question.correct_option]}</p>
 
       <h3>Rationale</h3>
       <p>{question.rationale}</p>
+
+      <details style={{ border: "1px solid #ccc", borderRadius: 6, padding: "0.75rem", marginTop: "1rem" }}>
+        <summary style={{ cursor: "pointer", fontWeight: "bold" }}>LPN Launchpad 5-Step Strategy</summary>
+        <ol style={{ marginTop: "0.75rem" }}>
+          <li>Understand the question: {question.strategy_1_understand}</li>
+          <li>Clear the stem: {question.strategy_2_remove_distractors}</li>
+          <li>Identify the correct answer: {question.strategy_3_identify_correct}</li>
+          <li>Eliminate the incorrect answers: {question.strategy_4_eliminate_incorrect}</li>
+          {question.strategy_5_framework !== "none" && (
+            <li>
+              Apply a critical-thinking framework: {question.strategy_5_framework}
+              <br />
+              {question.strategy_5_framework_application}
+            </li>
+          )}
+        </ol>
+      </details>
 
       <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
         <Link href={`/quiz/${encodeURIComponent(subject)}`} style={{ flex: 1 }}>
