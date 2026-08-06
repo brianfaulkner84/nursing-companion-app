@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/raised-hand-reminder",
-      "schedule": "0 13 * * *"
-    }
-  ]
-}
