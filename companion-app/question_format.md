@@ -33,6 +33,11 @@ Write NCLEX-PN style practice questions in this exact JSON structure, one object
 ```
 
 Rules:
+- `subject` must be one of the exact class names in `subject_taxonomy.md`, spelled exactly as
+  listed there. Don't invent a new subject name, even a close variant, the dashboard groups
+  questions by exact string match. If a drug question clearly belongs to one body system, use
+  that system's "Drugs for/that Affect the [System]" class from the list; only use
+  `Pharmacology` or `Antibiotics` for drug questions that genuinely don't tie to one system.
 - `title` and `secondary_category` are required on every question, the database rejects rows missing either.
 - `title` is a short topic label shown to the student above the question. Keep it under 8 words.
 - `item_type` is `single_choice` for one correct answer, `multiple_response` for traditional select-all-that-apply (any number of options can be correct, the student isn't told how many), or `select_n` for select-all-that-apply where the question tells the student exactly how many to pick. For `select_n`, don't add a separate "how many" field, the required count is derived automatically from however many options you mark `is_correct: true`. Mark every correct option `is_correct: true` for `multiple_response` and `select_n`. A `single_choice` question must have exactly one `is_correct: true` option, the importer rejects anything else.
