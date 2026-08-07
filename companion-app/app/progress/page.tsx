@@ -1,0 +1,48 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import ResetSubjectButton from "@/components/reset-subject-button";
+
+export default async function Progress() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in");
+
+  const { data: questions } = await supabase.from("questions").select("id, subject");
+  const { data: attempts } = await supabase
+    .from("attempts")
+    .select("question_id, correct")
+    .eq("user_id", user.id);
+
+  const subjects = Array.from(new Set((questions ?? []).map((q) => q.subject)));
+  const attemptsByQuestion = new Map((attempts ?? []).map((a) => [a.question_id, a.correct]));
+
+  const rows = subjects.map((subject) => {
+    const ids = (questions ?? []).filter((q) => q.subject === subject).map((q) => q.id);
+    const attempted = ids.filter((id) => attemptsByQuestion.has(id));
+    const correct = attempted.filter((id) => attemptsByQuestion.get(id)).length;
+    const masteryPercent = attempted.length > 0 ? Math.round((correct / attempted.length) * 100) : 0;
+    return { subject, masteryPercent, attempted: attempted.length, total: ids.length };
+  });
+
+  return (
+    <div>
+      <h1>Progress</h1>
+      {rows.length === 0 && <p className="muted">No questions published yet.</p>}
+      {rows.map((r) => (
+        <div key={r.subject} className="card" style={{ marginBottom: "0.75rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+            <span className="tile-title">
+              {r.subject}: {r.masteryPercent}% mastery ({r.attempted}/{r.total} answered)
+            </span>
+            {r.attempted > 0 && <ResetSubjectButton subject={r.subject} />}
+          </div>
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${r.masteryPercent}%` }} />
+          </div>
+        </div>
+      ))}
+      <Link href="/dashboard" className="back-link">&larr; Back to dashboard</Link>
+    </div>
+  );
+}

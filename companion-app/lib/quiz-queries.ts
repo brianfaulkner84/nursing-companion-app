@@ -1,0 +1,66 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// Shared between the single-subject quiz (/quiz/[subject]) and the multi-subject review
+// session (/review-session), so a fix or schema change only has to happen in one place.
+
+export async function fetchNextQuestion(
+  supabase: SupabaseClient,
+  subjects: string[],
+  userId: string,
+  random: boolean
+) {
+  const { data: questions } = await supabase
+    .from("questions")
+    .select("*, question_interactions(*, item_types(name), question_options(*))")
+    .in("subject", subjects);
+
+  const { data: attempts } = await supabase
+    .from("attempts")
+    .select("question_id")
+    .eq("user_id", userId);
+
+  const attemptedIds = new Set((attempts ?? []).map((a: any) => a.question_id));
+  const unattempted = (questions ?? []).filter((q: any) => !attemptedIds.has(q.id));
+
+  if (unattempted.length === 0) return null;
+
+  const next = random
+    ? unattempted[Math.floor(Math.random() * unattempted.length)]
+    : unattempted[0];
+
+  // Every question has exactly one interaction today. A future bow-tie/matrix question
+  // would have more than one row here, and callers would need to render each in sequence.
+  const interaction = (next.question_interactions ?? [])[0];
+  const options = [...(interaction?.question_options ?? [])].sort(
+    (a: any, b: any) => a.display_order - b.display_order
+  );
+
+  return { question: next, interaction, options };
+}
+
+export async function fetchQuestionBreakdown(supabase: SupabaseClient, questionId: string) {
+  const { data: question } = await supabase
+    .from("questions")
+    .select(
+      "*, question_interactions(*, question_options(*), response_keys(*)), critical_thinking_frameworks(name)"
+    )
+    .eq("id", questionId)
+    .single();
+  if (!question) return null;
+
+  const interaction = (question.question_interactions ?? [])[0];
+  const options = [...(interaction?.question_options ?? [])].sort(
+    (a: any, b: any) => a.display_order - b.display_order
+  );
+  const correctIds = new Set<string>(
+    (interaction?.response_keys ?? []).map((k: any) => k.choice_id as string).filter(Boolean)
+  );
+
+  return {
+    question,
+    interaction,
+    options,
+    correctIds,
+    frameworkName: question.critical_thinking_frameworks?.name as string | undefined,
+  };
+}
