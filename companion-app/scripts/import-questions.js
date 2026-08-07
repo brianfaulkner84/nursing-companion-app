@@ -52,6 +52,11 @@ function validate(q) {
     }
   }
 
+  const hasFramework = q.framework && q.framework !== "none";
+  if (hasFramework && !q.framework_application) {
+    problems.push("framework is set but framework_application is missing");
+  }
+
   return problems;
 }
 
@@ -62,6 +67,7 @@ async function main() {
 
   for (const q of questions) {
     const label = q.title ?? q.question_text?.slice(0, 40) ?? "(untitled)";
+    let insertedId = null;
     try {
       const problems = validate(q);
       if (problems.length > 0) {
@@ -70,6 +76,9 @@ async function main() {
 
       const frameworkId = await resolveFrameworkId(q.framework);
 
+      // Insert unpublished first. Only flip is_published to true once the full option
+      // set has been written successfully, so a failure partway through never leaves a
+      // published question with missing or incomplete answer choices visible to students.
       const { data: inserted, error: qError } = await supabase
         .from("questions")
         .insert({
@@ -85,16 +94,17 @@ async function main() {
           strategy_3_identify_correct: q.strategy_3_identify_correct,
           strategy_4_intro: q.strategy_4_intro ?? null,
           framework_id: frameworkId,
-          framework_application: q.framework_application ?? "",
+          framework_application: q.framework_application ?? null,
           source_subject_tag: q.source_subject_tag ?? null,
           source_question_number: q.source_question_number ?? null,
           review_status: "approved",
-          is_published: true,
+          is_published: false,
         })
         .select("id")
         .single();
 
       if (qError) throw qError;
+      insertedId = inserted.id;
 
       const optionRows = (q.options ?? []).map((o, i) => ({
         question_id: inserted.id,
@@ -108,10 +118,20 @@ async function main() {
       const { error: oError } = await supabase.from("question_options").insert(optionRows);
       if (oError) throw oError;
 
+      const { error: publishError } = await supabase
+        .from("questions")
+        .update({ is_published: true })
+        .eq("id", inserted.id);
+      if (publishError) throw publishError;
+
       imported++;
     } catch (err) {
       failed++;
       console.error(`Failed on "${label}": ${err.message}`);
+      if (insertedId) {
+        // Clean up the orphaned question row so failed imports don't leave dangling drafts.
+        await supabase.from("questions").delete().eq("id", insertedId);
+      }
     }
   }
 

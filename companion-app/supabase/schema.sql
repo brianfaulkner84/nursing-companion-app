@@ -75,7 +75,7 @@ create table questions (
   strategy_3_identify_correct text not null,
   strategy_4_intro text,
   framework_id uuid references critical_thinking_frameworks(id),
-  framework_application text not null default '',
+  framework_application text,
   source_subject_tag text,
   source_question_number text,
   review_status text not null default 'draft' check (review_status in ('draft', 'review', 'approved', 'rejected')),
@@ -121,13 +121,15 @@ create table raised_hands (
 );
 
 -- Keep updated_at current on every edit to a question.
+-- search_path is pinned empty so the function can't be tricked by objects created
+-- earlier in a mutable search_path (Supabase linter 0011_function_search_path_mutable).
 create or replace function set_updated_at()
 returns trigger as $$
 begin
   new.updated_at = now();
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql set search_path = '';
 
 create trigger questions_set_updated_at
   before update on questions
@@ -151,9 +153,9 @@ alter table question_options enable row level security;
 alter table attempts enable row level security;
 alter table raised_hands enable row level security;
 
-create policy "read own profile" on profiles for select using (auth.uid() = id);
-create policy "update own profile" on profiles for update using (auth.uid() = id);
-create policy "insert own profile" on profiles for insert with check (auth.uid() = id);
+create policy "read own profile" on profiles for select using ((select auth.uid()) = id);
+create policy "update own profile" on profiles for update using ((select auth.uid()) = id);
+create policy "insert own profile" on profiles for insert with check ((select auth.uid()) = id);
 
 -- No select policy on beta_codes: RLS is enabled with zero policies, so only the
 -- service role (used inside /api/redeem-code) can read it. Nothing else can list codes.
@@ -166,11 +168,11 @@ create policy "read options for published questions" on question_options for sel
   exists (select 1 from questions where questions.id = question_options.question_id and questions.is_published = true)
 );
 
-create policy "read own attempts" on attempts for select using (auth.uid() = user_id);
-create policy "insert own attempts" on attempts for insert with check (auth.uid() = user_id);
+create policy "read own attempts" on attempts for select using ((select auth.uid()) = user_id);
+create policy "insert own attempts" on attempts for insert with check ((select auth.uid()) = user_id);
 
-create policy "read own raised hands" on raised_hands for select using (auth.uid() = user_id);
-create policy "insert own raised hands" on raised_hands for insert with check (auth.uid() = user_id);
+create policy "read own raised hands" on raised_hands for select using ((select auth.uid()) = user_id);
+create policy "insert own raised hands" on raised_hands for insert with check ((select auth.uid()) = user_id);
 
 -- Service role (used only inside serverless functions and the import script) bypasses RLS automatically,
 -- so it can read/write draft and unpublished questions, and read beta_codes.

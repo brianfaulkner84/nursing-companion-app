@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     question.strategy_2_clear_stem,
     question.strategy_3_identify_correct,
     incorrectOptions.map((o: any) => `${o.option_label}: ${o.option_rationale}`).join(" "),
-    frameworkName ? `Framework (${frameworkName}): ${question.framework_application}` : "",
+    frameworkName ? `Framework (${frameworkName}): ${question.framework_application ?? ""}` : "",
   ].filter(Boolean).join(" ");
 
   // Live Claude call: draft a reply in Brian's classroom voice, for him to approve or edit before it goes to the student.
