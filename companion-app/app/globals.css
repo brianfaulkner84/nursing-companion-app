@@ -129,6 +129,17 @@ a {
   color: var(--gold-500);
 }
 
+.nav-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--gold-500);
+  color: var(--olive-900);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 /* Profile menu */
 
 .profile-menu {

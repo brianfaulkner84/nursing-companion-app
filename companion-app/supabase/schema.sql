@@ -283,7 +283,8 @@ create table raised_hands (
   status text not null default 'open' check (status in ('open', 'resolved')),
   created_at timestamptz not null default now(),
   answered_at timestamptz,
-  archived_by_instructor boolean not null default false
+  archived_by_instructor boolean not null default false,
+  archived_by_student boolean not null default false
 );
 
 -- The ongoing back-and-forth on a raised hand. user_id is always the STUDENT's id, even on

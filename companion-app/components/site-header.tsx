@@ -1,12 +1,27 @@
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import ProfileMenu from "@/components/profile-menu";
+import { getThinTopics } from "@/lib/content-gaps";
 
 export default async function SiteHeader() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isAdmin = !!user?.email && !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL;
+
+  // Only fetched for the admin account, students never pay this cost. This is the in-app
+  // stand-in for real notifications until email or push is worth setting up.
+  let openHandsCount = 0;
+  let thinTopicsCount = 0;
+  if (isAdmin) {
+    const admin = createAdminClient();
+    const [openHandsResult, thinTopics] = await Promise.all([
+      admin.from("raised_hands").select("id", { count: "exact", head: true }).eq("status", "open"),
+      getThinTopics(admin),
+    ]);
+    openHandsCount = openHandsResult.count ?? 0;
+    thinTopicsCount = thinTopics.length;
+  }
 
   return (
     <header className="site-header">
@@ -21,7 +36,18 @@ export default async function SiteHeader() {
           <nav className="header-nav">
             <Link href="/help">Help</Link>
             <Link href="/inbox">Inbox</Link>
-            {isAdmin && <Link href="/admin/inbox">Review inbox</Link>}
+            {isAdmin && (
+              <Link href="/admin/inbox">
+                Review inbox
+                {openHandsCount > 0 && <span className="nav-badge">{openHandsCount}</span>}
+              </Link>
+            )}
+            {isAdmin && (
+              <Link href="/admin/content-gaps">
+                Content gaps
+                {thinTopicsCount > 0 && <span className="nav-badge">{thinTopicsCount}</span>}
+              </Link>
+            )}
           </nav>
           <ProfileMenu email={user.email} />
         </div>

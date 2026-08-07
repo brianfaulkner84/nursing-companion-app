@@ -12,7 +12,7 @@ export default async function Inbox() {
 
   const { data: hands } = await supabase
     .from("raised_hands")
-    .select("id, status, created_at, questions(subject)")
+    .select("id, status, created_at, archived_by_student, questions(subject)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -31,6 +31,7 @@ export default async function Inbox() {
     subject: h.questions?.subject ?? "Question",
     status: h.status as "open" | "resolved",
     createdAt: h.created_at,
+    archived: h.archived_by_student as boolean,
     messages: (messages ?? []).filter((m: any) => m.raised_hand_id === h.id),
   }));
 

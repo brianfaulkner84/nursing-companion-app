@@ -33,7 +33,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     body: message.trim(),
   });
 
-  await admin.from("raised_hands").update({ status: "open" }).eq("id", params.id);
+  // Replying means they're clearly not done with it, even if they'd archived it earlier.
+  await admin.from("raised_hands").update({ status: "open", archived_by_student: false }).eq("id", params.id);
 
   return NextResponse.json({ ok: true });
 }

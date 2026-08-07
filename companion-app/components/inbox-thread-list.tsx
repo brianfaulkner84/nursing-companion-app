@@ -9,6 +9,7 @@ type Thread = {
   subject: string;
   status: "open" | "resolved";
   createdAt: string;
+  archived: boolean;
   messages: Message[];
 };
 
@@ -20,12 +21,43 @@ function timeAgo(iso: string) {
 }
 
 export default function InboxThreadList({ threads }: { threads: Thread[] }) {
+  const [showArchived, setShowArchived] = useState(false);
+
   if (threads.length === 0) return null;
+
+  const active = threads.filter((t) => !t.archived);
+  const archived = threads.filter((t) => t.archived);
+
   return (
-    <div className="tile-stack">
-      {threads.map((t) => (
-        <ThreadCard key={t.id} thread={t} />
-      ))}
+    <div>
+      {active.length === 0 && (
+        <p className="muted" style={{ marginBottom: "1rem" }}>
+          Nothing active. {archived.length > 0 ? "Everything's archived." : ""}
+        </p>
+      )}
+      <div className="tile-stack">
+        {active.map((t) => (
+          <ThreadCard key={t.id} thread={t} />
+        ))}
+      </div>
+
+      {archived.length > 0 && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className="btn btn-outline btn-small"
+          >
+            {showArchived ? "Hide archived" : `View archived (${archived.length})`}
+          </button>
+          {showArchived && (
+            <div className="tile-stack" style={{ marginTop: "0.75rem" }}>
+              {archived.map((t) => (
+                <ThreadCard key={t.id} thread={t} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -36,6 +68,7 @@ function ThreadCard({ thread }: { thread: Thread }) {
   const [sending, setSending] = useState(false);
   const [sentNotice, setSentNotice] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
 
   async function sendReply() {
     if (!reply.trim()) return;
@@ -57,6 +90,17 @@ function ThreadCard({ thread }: { thread: Thread }) {
     setDeletingId(id);
     await fetch(`/api/raised-hand-messages/${id}`, { method: "DELETE" });
     setDeletingId(null);
+    router.refresh();
+  }
+
+  async function toggleArchive() {
+    setArchiving(true);
+    await fetch(`/api/raised-hands/${thread.id}/archive`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived: !thread.archived }),
+    });
+    setArchiving(false);
     router.refresh();
   }
 
@@ -101,9 +145,14 @@ function ThreadCard({ thread }: { thread: Thread }) {
         placeholder="Continue the conversation..."
         style={{ marginTop: "0.5rem", marginBottom: "0.5rem" }}
       />
-      <button onClick={sendReply} disabled={sending || !reply.trim()} className="btn btn-outline btn-small">
-        {sending ? "Sending..." : "Send"}
-      </button>
+      <div className="btn-row">
+        <button onClick={sendReply} disabled={sending || !reply.trim()} className="btn btn-outline btn-small">
+          {sending ? "Sending..." : "Send"}
+        </button>
+        <button onClick={toggleArchive} disabled={archiving} className="btn btn-outline btn-small">
+          {archiving ? "..." : thread.archived ? "Move to active" : "Archive"}
+        </button>
+      </div>
     </div>
   );
 }
