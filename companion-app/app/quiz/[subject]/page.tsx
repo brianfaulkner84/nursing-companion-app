@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import QuizClient from "./quiz-client";
+import { fetchNextQuestion } from "@/lib/quiz-queries";
+import QuizClient from "@/components/quiz-client";
 
 export default async function Quiz({ params }: { params: { subject: string } }) {
   const supabase = createClient();
@@ -9,22 +10,17 @@ export default async function Quiz({ params }: { params: { subject: string } }) 
 
   const subject = decodeURIComponent(params.subject);
 
-  const { data: questions } = await supabase
-    .from("questions")
-    .select("*, question_options(*)")
-    .eq("subject", subject);
-
-  const { data: attempts } = await supabase
-    .from("attempts")
-    .select("question_id")
-    .eq("user_id", user.id);
-
-  const attemptedIds = new Set((attempts ?? []).map((a) => a.question_id));
-  const next = (questions ?? []).find((q) => !attemptedIds.has(q.id));
-
+  // Single-subject quiz: always the first unattempted question, not shuffled. The
+  // multi-subject review session (/review-session) uses the same helper with random=true.
+  const next = await fetchNextQuestion(supabase, [subject], user.id, false);
   if (!next) redirect(`/subject-complete?subject=${encodeURIComponent(subject)}`);
 
-  const options = [...(next.question_options ?? [])].sort((a, b) => a.display_order - b.display_order);
-
-  return <QuizClient question={next} options={options} subject={subject} />;
+  return (
+    <QuizClient
+      question={next.question}
+      interaction={next.interaction}
+      options={next.options}
+      answerHref={`/quiz/${encodeURIComponent(subject)}/answer`}
+    />
+  );
 }

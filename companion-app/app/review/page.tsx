@@ -9,35 +9,31 @@ export default async function Review() {
 
   const { data: attempts } = await supabase
     .from("attempts")
-    .select("id, question_id, selected_option_ids, correct, created_at, questions(subject, title, question_text)")
+    .select("id, question_id, selected_choice_ids, correct, created_at, questions(subject, title, question_text)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   return (
     <div>
       <h1>Review your answers</h1>
-      {(attempts ?? []).length === 0 && <p>You haven&apos;t answered any questions yet.</p>}
+      {(attempts ?? []).length === 0 && <p className="muted">You haven&apos;t answered any questions yet.</p>}
       {(attempts ?? []).map((a: any) => (
         <Link
           key={a.id}
-          href={`/quiz/${encodeURIComponent(a.questions.subject)}/answer?question=${a.question_id}&selected=${(a.selected_option_ids ?? []).join(",")}`}
-          style={{
-            display: "block",
-            border: "1px solid #ccc",
-            borderRadius: 6,
-            padding: "0.75rem",
-            marginBottom: "0.5rem",
-            textDecoration: "none",
-            color: "inherit",
-          }}
+          href={`/quiz/${encodeURIComponent(a.questions.subject)}/answer?question=${a.question_id}&selected=${(a.selected_choice_ids ?? []).join(",")}`}
+          className="tile"
+          style={{ display: "block", marginBottom: "0.5rem" }}
         >
-          <div style={{ fontSize: 12, color: "#666" }}>
-            {a.questions.subject} &middot; {a.correct ? "Correct" : "Not quite"}
+          <div className="tile-meta">
+            {a.questions.subject} &middot;{" "}
+            <span style={{ color: a.correct ? "var(--gold-600)" : "var(--wine-600)", fontWeight: 600 }}>
+              {a.correct ? "Correct" : "Not quite"}
+            </span>
           </div>
-          <div>{a.questions.title || a.questions.question_text}</div>
+          <div className="tile-title">{a.questions.title || a.questions.question_text}</div>
         </Link>
       ))}
-      <Link href="/dashboard">Back to dashboard</Link>
+      <Link href="/dashboard" className="back-link">&larr; Back to dashboard</Link>
     </div>
   );
 }

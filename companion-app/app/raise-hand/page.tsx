@@ -29,21 +29,20 @@ function RaiseHandForm() {
   }
 
   if (status === "sent") {
-    return <p>Sent. You&apos;ll hear back within a day or two.</p>;
+    return (
+      <div className="banner banner-correct" style={{ textTransform: "none", fontWeight: 500 }}>
+        Sent. You&apos;ll hear back within a day or two.
+      </div>
+    );
   }
 
   return (
     <div>
       <h1>Raise your hand</h1>
-      <p>Add anything that would help explain your confusion on this question.</p>
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={6}
-        style={{ width: "100%", padding: "0.6rem" }}
-      />
-      {status === "error" && <p style={{ color: "crimson" }}>Something went wrong. Try again.</p>}
-      <button onClick={send} disabled={status === "sending"} style={{ width: "100%", padding: "0.75rem", marginTop: "0.5rem" }}>
+      <p className="muted">Add anything that would help explain your confusion on this question.</p>
+      <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={6} style={{ marginBottom: "0.5rem" }} />
+      {status === "error" && <p className="error-text">Something went wrong. Try again.</p>}
+      <button onClick={send} disabled={status === "sending"} className="btn btn-primary">
         {status === "sending" ? "Sending..." : "Send"}
       </button>
     </div>

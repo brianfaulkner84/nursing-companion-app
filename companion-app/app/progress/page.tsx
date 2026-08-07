@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import ResetSubjectButton from "@/components/reset-subject-button";
 
 export default async function Progress() {
   const supabase = createClient();
@@ -27,15 +28,21 @@ export default async function Progress() {
   return (
     <div>
       <h1>Progress</h1>
+      {rows.length === 0 && <p className="muted">No questions published yet.</p>}
       {rows.map((r) => (
-        <div key={r.subject} style={{ marginBottom: "0.75rem" }}>
-          <div>{r.subject}: {r.masteryPercent}% mastery ({r.attempted}/{r.total} answered)</div>
-          <div style={{ background: "#eee", height: 8, borderRadius: 4 }}>
-            <div style={{ background: "#666", height: 8, borderRadius: 4, width: `${r.masteryPercent}%` }} />
+        <div key={r.subject} className="card" style={{ marginBottom: "0.75rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+            <span className="tile-title">
+              {r.subject}: {r.masteryPercent}% mastery ({r.attempted}/{r.total} answered)
+            </span>
+            {r.attempted > 0 && <ResetSubjectButton subject={r.subject} />}
+          </div>
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${r.masteryPercent}%` }} />
           </div>
         </div>
       ))}
-      <Link href="/dashboard">Back to dashboard</Link>
+      <Link href="/dashboard" className="back-link">&larr; Back to dashboard</Link>
     </div>
   );
 }

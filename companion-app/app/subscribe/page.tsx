@@ -29,17 +29,17 @@ export default function Subscribe() {
   return (
     <div>
       <h1>Subscribe</h1>
-      <div style={{ border: "1px solid #ccc", borderRadius: 6, padding: "0.75rem", margin: "1rem 0" }}>
+      <div className="banner banner-correct" style={{ textTransform: "none", fontWeight: 500 }}>
         Free beta, no plan required right now
       </div>
       <input
         placeholder="Beta code"
         value={betaCode}
         onChange={(e) => setBetaCode(e.target.value)}
-        style={{ width: "100%", padding: "0.6rem", marginBottom: "0.5rem" }}
+        style={{ marginBottom: "0.75rem" }}
       />
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button onClick={handleContinue} style={{ width: "100%", padding: "0.75rem" }}>
+      {error && <p className="error-text">{error}</p>}
+      <button className="btn btn-primary" onClick={handleContinue}>
         Continue
       </button>
     </div>

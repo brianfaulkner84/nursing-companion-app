@@ -16,19 +16,28 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: question } = await admin
     .from("questions")
-    .select("*, question_options(*), critical_thinking_frameworks(name)")
+    .select(
+      "*, question_interactions(*, question_options(*), response_keys(*)), critical_thinking_frameworks(name)"
+    )
     .eq("id", questionId)
     .single();
   if (!question) return NextResponse.json({ error: "question not found" }, { status: 404 });
 
-  const options = [...(question.question_options ?? [])].sort((a: any, b: any) => a.display_order - b.display_order);
-  const correctOptions = options.filter((o: any) => o.is_correct);
-  const incorrectOptions = options.filter((o: any) => !o.is_correct);
+  // Every question has exactly one interaction today.
+  const interaction = (question.question_interactions ?? [])[0];
+  const options = [...(interaction?.question_options ?? [])].sort(
+    (a: any, b: any) => a.display_order - b.display_order
+  );
+  const correctIds = new Set<string>(
+    (interaction?.response_keys ?? []).map((k: any) => k.choice_id as string).filter(Boolean)
+  );
+  const correctOptions = options.filter((o: any) => correctIds.has(o.id));
+  const incorrectOptions = options.filter((o: any) => !correctIds.has(o.id));
   const selectedOptions = options.filter((o: any) => selectedIds.includes(o.id));
   const frameworkName = question.critical_thinking_frameworks?.name;
 
   const optionsSummary = options
-    .map((o: any) => `${o.option_label}) ${o.option_text}${o.is_correct ? " [correct]" : ""}`)
+    .map((o: any) => `${o.option_label}) ${o.option_text}${correctIds.has(o.id) ? " [correct]" : ""}`)
     .join(" ");
 
   const strategySnapshot = [

@@ -12,7 +12,7 @@ Write NCLEX-PN style practice questions in this exact JSON structure, one object
   "subject": "Cardiovascular",
   "primary_category": "Physiological Integrity: Physiological Adaptation",
   "secondary_category": "Cardiovascular",
-  "question_type": "single_select",
+  "item_type": "single_choice",
   "question_text": "A client with heart failure reports...",
   "correct_answer_rationale": "Explains only why the correct answer is correct.",
   "strategy_1_understand": "One sentence on what the question is really asking.",
@@ -35,7 +35,7 @@ Write NCLEX-PN style practice questions in this exact JSON structure, one object
 Rules:
 - `title` and `secondary_category` are required on every question, the database rejects rows missing either.
 - `title` is a short topic label shown to the student above the question. Keep it under 8 words.
-- `question_type` is `single_select` for one correct answer, or `multiple_select` for select-all-that-apply. Mark every correct option `is_correct: true` when using `multiple_select`. A `single_select` question must have exactly one `is_correct: true` option, the importer rejects anything else.
+- `item_type` is `single_choice` for one correct answer, `multiple_response` for traditional select-all-that-apply (any number of options can be correct, the student isn't told how many), or `select_n` for select-all-that-apply where the question tells the student exactly how many to pick. For `select_n`, don't add a separate "how many" field, the required count is derived automatically from however many options you mark `is_correct: true`. Mark every correct option `is_correct: true` for `multiple_response` and `select_n`. A `single_choice` question must have exactly one `is_correct: true` option, the importer rejects anything else.
 - `primary_category` must be one of the four official NCLEX-PN Client Needs categories with subcategory: Safe and Effective Care Environment: Coordinated Care, Safe and Effective Care Environment: Safety and Infection Prevention and Control, Health Promotion and Maintenance, Psychosocial Integrity, Physiological Integrity: Basic Care and Comfort, Physiological Integrity: Pharmacological Therapies, Physiological Integrity: Reduction of Risk Potential, Physiological Integrity: Physiological Adaptation.
 - `correct_answer_rationale` explains only why the correct answer (or answers) is correct. Do not explain the wrong answers here, that belongs in each option's own `rationale`.
 - Every option where `is_correct` is `false` must have a `rationale` explaining specifically why that choice is wrong, the importer rejects a wrong option with no rationale. A correct option's `rationale` can be `null`. Option labels must be unique within a question (no two `A`s).
@@ -43,7 +43,8 @@ Rules:
 - `framework_application` is required whenever `framework` is set to a real framework. It must teach the reasoning tool, not just restate the answer: name what question to ask using that framework, then show how asking it points to the correct choice. If `framework` is `null` or `"none"`, set `framework_application` to `null` too.
 - Keep `strategy_1_understand`, `strategy_2_clear_stem`, and `strategy_3_identify_correct` to one sentence each. `framework_application` can run two to three sentences.
 - No extra fields beyond what's shown above.
+- This format only covers ordinary selection questions (single choice, multi-select). Case studies, matrices, cloze, bow-tie, and other next-gen NCLEX formats aren't supported by this importer yet, don't generate those.
 
 ## What to do with the output
 
-Save the JSON array as `questions.json` and bring it back. Run `node scripts/import-questions.js questions.json` (with your Supabase env vars set) to import it, this writes one row to `questions` and one row per option to `question_options`, and looks up `framework` by name in `critical_thinking_frameworks` automatically. The importer validates each question before inserting it (required fields present, exactly one correct answer for single_select, every wrong option has a rationale, no duplicate labels) and prints an error naming exactly what's wrong for anything it rejects, without touching the rest of the batch. Questions that pass import already approved and published, so they appear to students right away.
+Save the JSON array as `questions.json` and bring it back. Run `node scripts/import-questions.js questions.json` (with your Supabase env vars set) to import it, this writes one row to `questions`, one row to `question_interactions`, one row per option to `question_options`, one row per correct option to `response_keys`, and looks up `framework` and `item_type` by name automatically. The importer validates each question before inserting it (required fields present, exactly one correct answer for single_choice, every wrong option has a rationale, no duplicate labels) and prints an error naming exactly what's wrong for anything it rejects, without touching the rest of the batch. Questions that pass import already approved and published, so they appear to students right away.

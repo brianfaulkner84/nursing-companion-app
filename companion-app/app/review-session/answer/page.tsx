@@ -3,24 +3,26 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchQuestionBreakdown } from "@/lib/quiz-queries";
 
-export default async function AnswerBreakdown({
-  params,
+export default async function ReviewSessionAnswer({
   searchParams,
 }: {
-  params: { subject: string };
-  searchParams: { question?: string; selected?: string };
+  searchParams: { folder?: string; subjects?: string; label?: string; question?: string; selected?: string };
 }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
-  const subject = decodeURIComponent(params.subject);
+  const returnParams = searchParams.folder
+    ? `folder=${searchParams.folder}`
+    : `subjects=${searchParams.subjects ?? ""}&label=${searchParams.label ?? ""}`;
+  const backHref = `/review-session?${returnParams}`;
+
   const questionId = searchParams.question;
   const selectedIds = (searchParams.selected ?? "").split(",").filter(Boolean);
-  if (!questionId || selectedIds.length === 0) redirect(`/quiz/${encodeURIComponent(subject)}`);
+  if (!questionId || selectedIds.length === 0) redirect(backHref);
 
   const breakdown = await fetchQuestionBreakdown(supabase, questionId);
-  if (!breakdown) redirect(`/quiz/${encodeURIComponent(subject)}`);
+  if (!breakdown) redirect(backHref);
 
   const { question, options, correctIds, frameworkName } = breakdown;
   const correctOptions = options.filter((o: any) => correctIds.has(o.id));
@@ -72,7 +74,7 @@ export default async function AnswerBreakdown({
       </details>
 
       <div className="btn-row" style={{ marginTop: "1rem" }}>
-        <Link href={`/quiz/${encodeURIComponent(subject)}`} className="btn btn-primary">Next question</Link>
+        <Link href={backHref} className="btn btn-primary">Next question</Link>
         <Link href={`/raise-hand?question=${question.id}&selected=${selectedIds.join(",")}`} className="btn btn-secondary">
           Raise your hand
         </Link>
