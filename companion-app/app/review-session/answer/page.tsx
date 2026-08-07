@@ -83,6 +83,10 @@ export default async function ReviewSessionAnswer({
           Raise your hand
         </Link>
       </div>
+      <p className="muted" style={{ marginTop: "0.5rem" }}>
+        Still confused? Raise your hand and an instructor will send you a personalized reply in
+        your <Link href="/inbox">Inbox</Link>.
+      </p>
     </div>
   );
 }

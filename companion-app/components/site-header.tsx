@@ -6,6 +6,7 @@ import ProfileMenu from "@/components/profile-menu";
 export default async function SiteHeader() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = !!user?.email && !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL;
 
   return (
     <header className="site-header">
@@ -15,7 +16,16 @@ export default async function SiteHeader() {
           LPN <span>Launchpad</span>
         </span>
       </Link>
-      {user?.email && <ProfileMenu email={user.email} />}
+      {user?.email && (
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <nav className="header-nav">
+            <Link href="/help">Help</Link>
+            <Link href="/inbox">Inbox</Link>
+            {isAdmin && <Link href="/admin/inbox">Review inbox</Link>}
+          </nav>
+          <ProfileMenu email={user.email} />
+        </div>
+      )}
     </header>
   );
 }

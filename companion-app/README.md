@@ -21,8 +21,12 @@ question. This is also the agentic step: it assembles the question, the student'
 selected answer, the strategy walkthrough, and the student's note into a prompt, then
 calls Claude (Haiku) to draft a reply in an instructor's voice addressing the
 student's specific confusion, not just repeating the rationale. The draft is saved to
-`raised_hands.claude_draft_reply` and emailed for review before anything reaches a
-student — it is not sent automatically.
+`raised_hands.claude_draft_reply` and emailed to the instructor for review — it is
+never sent to the student automatically. The instructor reviews and edits the draft at
+`/admin/inbox` (gated to whichever Google account matches `ADMIN_EMAIL`) and sends it
+from there; `/api/raised-hands/[id]/respond` writes the final reply to
+`raised_hands.sent_reply` and marks the row resolved. The student sees it on their own
+`/inbox` page — no student or instructor email address is ever exchanged in-app.
 
 ## Data model
 
@@ -42,7 +46,7 @@ question is submitted.
 
 All credentials are environment variables, set in Vercel and never committed. See
 `.env.local.example` for the full list (Supabase URL/anon/service-role keys,
-Anthropic API key, Stripe keys, Resend key, cron secret).
+Anthropic API key, Stripe keys, Resend key, cron secret, admin email).
 
 ## Deploy steps
 
@@ -60,12 +64,15 @@ Anthropic API key, Stripe keys, Resend key, cron secret).
 ## What's built
 
 Google sign-in, Stripe subscription with a 14-day trial (plus beta codes), a
-dashboard that browses subjects two ways (by course module, pulled from the table of
-contents of the LPN Launchpad study books, or by NCLEX test-plan topic) instead of one
-flat list, single-subject and multi-subject review sessions, a custom review builder
-with saved folders, answer breakdown with strategy and rationale, raise-a-hand with a
-Claude-drafted reply, per-subject progress reset, and a daily reminder cron. Full
-brand styling pulled from the LPN Launchpad logo and design packet.
+dashboard that browses subjects three ways (by course module, pulled from the table
+of contents of the LPN Launchpad study books; by NCLEX test-plan topic; or by
+question type) instead of one flat list, single-subject and multi-subject review
+sessions, a custom review builder with saved folders, answer breakdown with strategy
+and rationale, raise-a-hand with a Claude-drafted reply reviewed and sent by the
+instructor through `/admin/inbox`, a student-facing `/inbox` showing that reply, a
+`/help` page walking through every screen, per-subject progress reset, and a daily
+reminder cron. Full brand styling pulled from the LPN Launchpad logo and design
+packet.
 
 New subjects need a module tag to show up under the right module on the dashboard
 (they show under "Other" until tagged) — see
@@ -73,6 +80,4 @@ New subjects need a module tag to show up under the right module on the dashboar
 
 ## What's not built yet
 
-A student-facing view of the instructor's reply to a raised hand (right now the loop
-ends at the reminder email — there's no in-app inbox yet), a profile/preferences
-screen, and a weekly performance email.
+A profile/preferences screen and a weekly performance email.

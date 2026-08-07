@@ -25,7 +25,7 @@ export default async function Review() {
           style={{ display: "block", marginBottom: "0.5rem" }}
         >
           <div className="tile-meta">
-            {a.questions.subject} &middot;{" "}
+            {a.questions.subject} ·{" "}
             <span style={{ color: a.correct ? "var(--gold-600)" : "var(--wine-600)", fontWeight: 600 }}>
               {a.correct ? "Correct" : "Not quite"}
             </span>

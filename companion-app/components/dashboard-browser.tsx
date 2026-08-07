@@ -102,8 +102,8 @@ export default function DashboardBrowser({
                   <div className="cat-tile-title">{g.name}</div>
                   <div className="cat-tile-meta">
                     {g.modules.length > 1
-                      ? `${g.modules.length} parts &middot; ${g.percent}%`
-                      : `${g.modules[0].subjects.length} subject${g.modules[0].subjects.length === 1 ? "" : "s"} &middot; ${g.percent}%`}
+                      ? `${g.modules.length} parts · ${g.percent}%`
+                      : `${g.modules[0].subjects.length} subject${g.modules[0].subjects.length === 1 ? "" : "s"} · ${g.percent}%`}
                   </div>
                 </button>
               ))}
@@ -121,7 +121,7 @@ export default function DashboardBrowser({
                   <button key={m.name} className="cat-tile" onClick={() => setOpenModule(m.name)}>
                     <div className="cat-tile-title">{m.name}</div>
                     <div className="cat-tile-meta">
-                      {m.subjects.length} subject{m.subjects.length === 1 ? "" : "s"} &middot; {m.percent}%
+                      {m.subjects.length} subject{m.subjects.length === 1 ? "" : "s"} · {m.percent}%
                     </div>
                   </button>
                 ))}
@@ -144,7 +144,7 @@ export default function DashboardBrowser({
                   <a key={s.subject} href={`/quiz/${encodeURIComponent(s.subject)}`} className="tile">
                     <div className="tile-title">{s.subject}</div>
                     <div className="tile-meta">
-                      {s.total} question{s.total === 1 ? "" : "s"} &middot; {s.percent}% complete
+                      {s.total} question{s.total === 1 ? "" : "s"} · {s.percent}% complete
                     </div>
                   </a>
                 ))}
@@ -167,7 +167,7 @@ export default function DashboardBrowser({
             <button key={c.category} className="tile category-tile" onClick={() => practiceCategory(c.category)}>
               <div className="tile-title">{c.category}</div>
               <div className="tile-meta">
-                {c.total} question{c.total === 1 ? "" : "s"} &middot; {c.percent}% complete
+                {c.total} question{c.total === 1 ? "" : "s"} · {c.percent}% complete
               </div>
             </button>
           ))}
@@ -183,7 +183,7 @@ export default function DashboardBrowser({
             <button key={it.itemType} className="tile category-tile" onClick={() => practiceItemType(it.itemType, it.label)}>
               <div className="tile-title">{it.label}</div>
               <div className="tile-meta">
-                {it.total} question{it.total === 1 ? "" : "s"} &middot; {it.percent}% complete
+                {it.total} question{it.total === 1 ? "" : "s"} · {it.percent}% complete
               </div>
             </button>
           ))}

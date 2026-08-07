@@ -31,7 +31,7 @@ function RaiseHandForm() {
   if (status === "sent") {
     return (
       <div className="banner banner-correct" style={{ textTransform: "none", fontWeight: 500 }}>
-        Sent. You&apos;ll hear back within a day or two.
+        Sent. An instructor will reply in your Inbox, usually within a day or two.
       </div>
     );
   }
@@ -39,7 +39,11 @@ function RaiseHandForm() {
   return (
     <div>
       <h1>Raise your hand</h1>
-      <p className="muted">Add anything that would help explain your confusion on this question.</p>
+      <p className="muted">
+        This sends the question, your answer, and your note to an instructor for review. Add
+        anything that would help explain your confusion, then check your Inbox in a day or two
+        for a reply, nothing gets emailed.
+      </p>
       <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={6} style={{ marginBottom: "0.5rem" }} />
       {status === "error" && <p className="error-text">Something went wrong. Try again.</p>}
       <button onClick={send} disabled={status === "sending"} className="btn btn-primary">

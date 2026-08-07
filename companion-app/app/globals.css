@@ -110,6 +110,25 @@ a {
   color: var(--gold-500);
 }
 
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.header-nav a {
+  color: var(--cream-100);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+.header-nav a:hover {
+  opacity: 1;
+  color: var(--gold-500);
+}
+
 /* Profile menu */
 
 .profile-menu {
@@ -556,4 +575,42 @@ label {
 
 .back-link:hover {
   color: var(--gold-600);
+}
+
+/* Inbox */
+
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.status-badge-open {
+  background: var(--sage-200);
+  color: var(--olive-900);
+}
+
+.status-badge-answered {
+  background: var(--gold-100);
+  color: var(--olive-900);
+  border: 1px solid var(--gold-500);
+}
+
+/* Help page */
+
+.help-section {
+  margin-bottom: 1.75rem;
+}
+
+.help-section h2 {
+  margin-bottom: 0.3rem;
+}
+
+.help-section p {
+  margin-bottom: 0.5rem;
 }

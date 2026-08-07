@@ -281,7 +281,8 @@ create table raised_hands (
   claude_draft_reply text,
   sent_reply text,
   status text not null default 'open' check (status in ('open', 'resolved')),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  answered_at timestamptz
 );
 
 -- A student-built, named set of subjects ("My Exam 2 Review"). The Full/Pediatrics/
