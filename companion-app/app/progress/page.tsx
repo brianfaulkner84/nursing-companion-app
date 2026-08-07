@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/fetch-all";
 import ResetSubjectButton from "@/components/reset-subject-button";
 
 export default async function Progress() {
@@ -8,17 +9,23 @@ export default async function Progress() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
-  const { data: questions } = await supabase.from("questions").select("id, subject");
-  const { data: attempts } = await supabase
-    .from("attempts")
-    .select("question_id, correct")
-    .eq("user_id", user.id);
+  const questions = await fetchAllRows((from, to) =>
+    supabase.from("questions").select("id, subject").order("id").range(from, to)
+  );
+  const attempts = await fetchAllRows((from, to) =>
+    supabase
+      .from("attempts")
+      .select("question_id, correct")
+      .eq("user_id", user.id)
+      .order("id")
+      .range(from, to)
+  );
 
-  const subjects = Array.from(new Set((questions ?? []).map((q) => q.subject)));
-  const attemptsByQuestion = new Map((attempts ?? []).map((a) => [a.question_id, a.correct]));
+  const subjects = Array.from(new Set(questions.map((q) => q.subject)));
+  const attemptsByQuestion = new Map(attempts.map((a) => [a.question_id, a.correct]));
 
   const rows = subjects.map((subject) => {
-    const ids = (questions ?? []).filter((q) => q.subject === subject).map((q) => q.id);
+    const ids = questions.filter((q) => q.subject === subject).map((q) => q.id);
     const attempted = ids.filter((id) => attemptsByQuestion.has(id));
     const correct = attempted.filter((id) => attemptsByQuestion.get(id)).length;
     const masteryPercent = attempted.length > 0 ? Math.round((correct / attempted.length) * 100) : 0;

@@ -21,12 +21,15 @@ question. This is also the agentic step: it assembles the question, the student'
 selected answer, the strategy walkthrough, and the student's note into a prompt, then
 calls Claude (Haiku) to draft a reply in an instructor's voice addressing the
 student's specific confusion, not just repeating the rationale. The draft is saved to
-`raised_hands.claude_draft_reply` and emailed to the instructor for review — it is
-never sent to the student automatically. The instructor reviews and edits the draft at
-`/admin/inbox` (gated to whichever Google account matches `ADMIN_EMAIL`) and sends it
-from there; `/api/raised-hands/[id]/respond` writes the final reply and marks the
-thread resolved. The student sees it on their own `/inbox` page — no student or
-instructor email address is ever exchanged in-app.
+`raised_hands.claude_draft_reply` and queued in the instructor's in-app review
+inbox — it is never sent to the student automatically. A header badge (gated to
+whichever Google account matches `ADMIN_EMAIL`) shows the open-thread count, and the
+instructor reviews and edits the draft at `/admin/inbox` and sends it from there;
+`/api/raised-hands/[id]/respond` writes the final reply and marks the thread
+resolved. The student sees it on their own `/inbox` page — no student or instructor
+email address is ever exchanged in-app. (An optional email nudge exists too: if
+`RESEND_API_KEY` is set, a new raised hand also emails `NOTIFY_EMAIL` as a backup
+notification, but the badge and in-app inbox are the primary path and work without it.)
 
 This is an ongoing thread, not a single message and reply. Every message either side
 sends is a row in `raised_hand_messages` (`/api/raised-hands/[id]/reply` for the
@@ -51,6 +54,101 @@ saved custom review sets; `subscriptions` and `profiles.access_type` gate access
 scoped to the signed-in user. Server-side answer scoring (`/api/submit-attempt`) uses
 the service-role key so the answer key is never shipped to the browser before a
 question is submitted.
+
+## Roles and schools
+
+Three roles: `student`, `instructor`, `admin`, stored on `profiles.role`. An instructor can
+do everything admin can except manage content: they run `/admin/inbox` (reply to raised
+hands) and `/admin/feedback` (review general feedback and flagged questions), scoped to their
+own school's students. `/admin/content-gaps` and the question bank stay admin-only, that's
+curriculum ownership, not day-to-day student support. Admin sees every school unfiltered,
+which is deliberate: it's how Brian can audit any student/instructor conversation, not just
+the ones he personally replied to.
+
+Feedback and question flags escalate exactly one level: a student's submission is visible to
+instructors (and admin), an instructor's own submission skips the instructor queue and goes
+to admin only, so instructors never see each other's escalations.
+
+Only one school exists today (seeded by the migration), but `schools` and `profiles.school_id`
+/ `beta_codes.school_id` are already wired up, on purpose: retrofitting school scoping onto
+tables full of real student data later would be a much riskier migration than building it in
+now while nothing's live. There's no admin UI for multi-school yet, that's still worth
+building once a second real school shows up.
+
+Role and school are set on beta-code redemption (`/api/redeem-code`), never by the user
+directly — the `prevent_self_privilege_escalation` trigger in `schema.sql` blocks a signed-in
+user from changing their own `role`, `school_id`, `access_type`, or `beta_code_used`, even
+though the RLS policy that lets them update their own profile row has no column restriction
+by itself. To generate a code for a new school's instructor or student batch:
+
+```sql
+insert into schools (name) values ('Some Other Nursing Program') returning id;
+-- then, using the id returned above:
+insert into beta_codes (code, grant_type, active, role, school_id) values
+  ('SOMEPROGRAM-INSTRUCTOR', 'lifetime-free', true, 'instructor', '<school id>'),
+  ('SOMEPROGRAM-STUDENT', 'lifetime-free', true, 'student', '<school id>');
+```
+
+A school-level package with an expiration date isn't built yet, codes just grant lifetime
+access today, same as `68C-FTW`.
+
+### Expiration and archiving
+
+A school bought for one semester gets an `access_expires_at` date. `hasAccess()`
+(`lib/access.ts`) checks it on every access-gated page load, so access ends automatically the
+moment it passes -- nothing to run, nothing to remember. Archiving is a separate, manual, and
+immediate override for "this ends right now regardless of any date," at either the whole-school
+or single-person level. Neither one deletes anything: attempts, raised hands, everything stays
+in the database untouched, so if a school renews or a person's access is restored, they pick
+back up exactly where they left off. `/subscribe` explains which of these happened instead of
+just showing the generic paywall, and still lets someone whose school merely expired subscribe
+individually to keep going -- someone who was deliberately archived can't buy their way back in,
+that has to be undone by you.
+
+There's no admin UI for any of this yet (same reasoning as no multi-school UI: one school,
+one admin, direct SQL is faster than building a page for it right now). All of these are
+plain profile/school updates through the Supabase SQL editor, which bypasses RLS the same way
+the service role does:
+
+```sql
+-- Set a school's semester package to expire on a date.
+update schools set access_expires_at = '2026-12-20' where name = 'Some Other Nursing Program';
+
+-- Archive a school entirely (stopped paying, program ended, etc). Locks out every student
+-- and instructor at that school immediately, keeps all their data.
+update schools set archived_at = now() where name = 'Some Other Nursing Program';
+
+-- Un-archive a school (they came back).
+update schools set archived_at = null where name = 'Some Other Nursing Program';
+
+-- Archive one student or instructor without touching their whole school (removed from the
+-- organization, needs pulling individually).
+update profiles set archived_at = now() where id = (select id from auth.users where email = 'someone@example.com');
+
+-- Un-archive one person.
+update profiles set archived_at = null where id = (select id from auth.users where email = 'someone@example.com');
+```
+
+**Correcting a role, school, or a wrongly-redeemed code.** Role and school_id only ever
+change through a service-role write (redeem-code, or a raw SQL update like these -- see the
+`prevent_self_privilege_escalation` trigger in `schema.sql`), so if someone redeems the wrong
+code, self-service redemption alone might not fix it. Redeeming a second, correct code
+*does* self-correct `school_id` (always overwritten by whatever code was redeemed), but it
+will NOT downgrade `role` -- if someone accidentally redeemed an instructor code and should be
+a student, redeeming a student code afterward won't undo that, roles only ever escalate
+through the redemption flow, on purpose (see `/api/redeem-code`). For that case, or removing
+an instructor from an organization, fix it directly:
+
+```sql
+-- Correct someone's role and/or school directly (e.g. accidentally redeemed an instructor
+-- code, or an instructor is being moved to a different school).
+update profiles set role = 'student', school_id = (select id from schools where name = 'Some Other Nursing Program')
+where id = (select id from auth.users where email = 'someone@example.com');
+
+-- Fully reset a wrongly-redeemed code so someone can start over with the right one.
+update profiles set beta_code_used = null, access_type = 'free-trial', role = 'student', school_id = null
+where id = (select id from auth.users where email = 'someone@example.com');
+```
 
 ## Secrets
 
@@ -80,9 +178,11 @@ question type) instead of one flat list, single-subject and multi-subject review
 sessions, a custom review builder with saved folders, answer breakdown with strategy
 and rationale, raise-a-hand with a Claude-drafted reply reviewed and sent by the
 instructor through `/admin/inbox`, a student-facing `/inbox` showing that reply, a
-`/help` page walking through every screen, per-subject progress reset, and a daily
-reminder cron. Full brand styling pulled from the LPN Launchpad logo and design
-packet.
+`/help` page walking through every screen, per-subject progress reset, a daily
+reminder cron, and in-app feedback: a general `/feedback` form plus a "Flag this
+question" control on the answer breakdown screen for content-specific issues, both
+reviewed by the instructor at `/admin/feedback`. Full brand styling pulled from the
+LPN Launchpad logo and design packet.
 
 New subjects need a module tag to show up under the right module on the dashboard
 (they show under "Other" until tagged) — see

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchAllRows } from "@/lib/fetch-all";
 
 // Shared between the single-subject quiz (/quiz/[subject]) and the multi-subject review
 // session (/review-session), so a fix or schema change only has to happen in one place.
@@ -27,18 +28,21 @@ export async function fetchNextQuestion(
   userId: string,
   random: boolean
 ) {
-  const { data: questions } = await supabase
-    .from("questions")
-    .select("*, question_interactions(*, item_types(name), question_options(*))")
-    .in("subject", subjects);
+  const questions = await fetchAllRows((from, to) =>
+    supabase
+      .from("questions")
+      .select("*, question_interactions(*, item_types(name), question_options(*))")
+      .in("subject", subjects)
+      .order("id")
+      .range(from, to)
+  );
 
-  const { data: attempts } = await supabase
-    .from("attempts")
-    .select("question_id")
-    .eq("user_id", userId);
+  const attempts = await fetchAllRows((from, to) =>
+    supabase.from("attempts").select("question_id").eq("user_id", userId).order("id").range(from, to)
+  );
 
-  const attemptedIds = new Set((attempts ?? []).map((a: any) => a.question_id as string));
-  return pickNext(questions ?? [], attemptedIds, random);
+  const attemptedIds = new Set(attempts.map((a: any) => a.question_id as string));
+  return pickNext(questions, attemptedIds, random);
 }
 
 // Same as fetchNextQuestion, but filtered by NCLEX primary_category instead of subject, for
@@ -49,18 +53,21 @@ export async function fetchNextQuestionByCategory(
   userId: string,
   random: boolean
 ) {
-  const { data: questions } = await supabase
-    .from("questions")
-    .select("*, question_interactions(*, item_types(name), question_options(*))")
-    .eq("primary_category", category);
+  const questions = await fetchAllRows((from, to) =>
+    supabase
+      .from("questions")
+      .select("*, question_interactions(*, item_types(name), question_options(*))")
+      .eq("primary_category", category)
+      .order("id")
+      .range(from, to)
+  );
 
-  const { data: attempts } = await supabase
-    .from("attempts")
-    .select("question_id")
-    .eq("user_id", userId);
+  const attempts = await fetchAllRows((from, to) =>
+    supabase.from("attempts").select("question_id").eq("user_id", userId).order("id").range(from, to)
+  );
 
-  const attemptedIds = new Set((attempts ?? []).map((a: any) => a.question_id as string));
-  return pickNext(questions ?? [], attemptedIds, random);
+  const attemptedIds = new Set(attempts.map((a: any) => a.question_id as string));
+  return pickNext(questions, attemptedIds, random);
 }
 
 // Same idea, filtered by item_type (single_choice, multiple_response/SATA, select_n) instead
@@ -78,18 +85,21 @@ export async function fetchNextQuestionByItemType(
     .single();
   if (!itemType) return null;
 
-  const { data: questions } = await supabase
-    .from("questions")
-    .select("*, question_interactions(*, item_types(name), question_options(*))")
-    .eq("item_type_id", itemType.id);
+  const questions = await fetchAllRows((from, to) =>
+    supabase
+      .from("questions")
+      .select("*, question_interactions(*, item_types(name), question_options(*))")
+      .eq("item_type_id", itemType.id)
+      .order("id")
+      .range(from, to)
+  );
 
-  const { data: attempts } = await supabase
-    .from("attempts")
-    .select("question_id")
-    .eq("user_id", userId);
+  const attempts = await fetchAllRows((from, to) =>
+    supabase.from("attempts").select("question_id").eq("user_id", userId).order("id").range(from, to)
+  );
 
-  const attemptedIds = new Set((attempts ?? []).map((a: any) => a.question_id as string));
-  return pickNext(questions ?? [], attemptedIds, random);
+  const attemptedIds = new Set(attempts.map((a: any) => a.question_id as string));
+  return pickNext(questions, attemptedIds, random);
 }
 
 export async function fetchQuestionBreakdown(supabase: SupabaseClient, questionId: string) {

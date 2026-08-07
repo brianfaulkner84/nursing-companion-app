@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Message = { id: string; sender: "student" | "instructor"; body: string; created_at: string };
+type Message = {
+  id: string;
+  sender: "student" | "instructor";
+  body: string;
+  created_at: string;
+  instructorName?: string | null;
+};
 type Thread = {
   id: string;
   subject: string;
@@ -15,9 +21,11 @@ type Thread = {
 export default function AdminInboxList({
   openThreads,
   resolvedThreads,
+  showInstructorNames = false,
 }: {
   openThreads: Thread[];
   resolvedThreads: Thread[];
+  showInstructorNames?: boolean;
 }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Record<string, string>>(
@@ -126,7 +134,11 @@ export default function AdminInboxList({
                 <div key={m.id} className={`message-bubble ${m.sender === "instructor" ? "card-dark" : "card"}`}>
                   <div className="message-sender">
                     <span style={{ color: m.sender === "instructor" ? "var(--gold-100)" : "var(--sage-600)" }}>
-                      {m.sender === "instructor" ? "You" : "Student"}
+                      {m.sender === "instructor"
+                        ? showInstructorNames
+                          ? m.instructorName ?? "Instructor"
+                          : "You"
+                        : "Student"}
                     </span>
                   </div>
                   <p>{m.body}</p>

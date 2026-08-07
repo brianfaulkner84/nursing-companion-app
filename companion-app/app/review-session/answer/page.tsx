@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchQuestionBreakdown } from "@/lib/quiz-queries";
+import QuestionFlagButton from "@/components/question-flag-button";
 
 export default async function ReviewSessionAnswer({
   searchParams,
@@ -87,6 +88,7 @@ export default async function ReviewSessionAnswer({
         Still confused? Raise your hand and an instructor will send you a personalized reply in
         your <Link href="/inbox">Inbox</Link>.
       </p>
+      <QuestionFlagButton questionId={question.id} />
     </div>
   );
 }

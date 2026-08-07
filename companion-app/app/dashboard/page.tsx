@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { hasAccess } from "@/lib/access";
+import { fetchAllRows } from "@/lib/fetch-all";
 import DashboardBrowser from "@/components/dashboard-browser";
 
 // Without this, Next.js can cache the Supabase fetch responses (subjects/modules in
@@ -16,19 +17,26 @@ export default async function Dashboard() {
   if (!user) redirect("/sign-in");
   if (!(await hasAccess(supabase, user.id))) redirect("/subscribe");
 
-  const { data: questions } = await supabase
-    .from("questions")
-    .select("id, subject, primary_category, item_types(name)");
+  const allQuestions = await fetchAllRows((from, to) =>
+    supabase
+      .from("questions")
+      .select("id, subject, primary_category, item_types(name)")
+      .order("id")
+      .range(from, to)
+  );
   const { data: subjectRows } = await supabase
     .from("subjects")
     .select("name, module_id, modules(name, display_order, group_id, module_groups(name, display_order))");
-  const { data: attempts } = await supabase
-    .from("attempts")
-    .select("question_id, correct")
-    .eq("user_id", user.id);
+  const attempts = await fetchAllRows((from, to) =>
+    supabase
+      .from("attempts")
+      .select("question_id, correct")
+      .eq("user_id", user.id)
+      .order("id")
+      .range(from, to)
+  );
 
-  const allQuestions = questions ?? [];
-  const attemptedIds = new Set((attempts ?? []).map((a) => a.question_id));
+  const attemptedIds = new Set(attempts.map((a) => a.question_id));
 
   const subjectNames = Array.from(new Set(allQuestions.map((q) => q.subject)));
   type ModuleInfo = {

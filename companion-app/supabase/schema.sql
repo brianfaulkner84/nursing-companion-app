@@ -5,14 +5,66 @@
 -- bow-tie question would have three; a matrix question one per row) without changing this
 -- schema again. See supabase/migrations for how this evolved from the original flat table.
 
+-- The school a profile belongs to. Only one row exists today (seeded below); this exists so
+-- retrofitting multi-school support later doesn't mean a risky migration on live student data.
+-- access_expires_at is a package expiration (e.g. end of semester): hasAccess() checks it on
+-- every access-gated page load, so access ends automatically the moment it passes, no daily
+-- job needed. archived_at is a manual override for "this ends now regardless of any date" --
+-- a school that stops paying mid-semester. Neither ever deletes data.
+create table schools (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  access_expires_at timestamptz,
+  archived_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+insert into schools (name) values ('LPN Launchpad');
+
 create table profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
   beta_code_used text,
   access_type text not null default 'free-trial' check (access_type in ('free-trial', 'lifetime-free', 'paid')),
   weekly_email boolean not null default true,
+  role text not null default 'student' check (role in ('student', 'instructor', 'admin')),
+  school_id uuid references schools(id),
+  -- Manual per-person archive, independent of school-level archiving: pulling one student or
+  -- instructor (removed from the organization, redeemed the wrong code) without archiving
+  -- their whole school. Locks them out, keeps their data.
+  archived_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+-- SECURITY: role, school_id, access_type, beta_code_used, and archived_at must only ever
+-- change through a service-role write (redeem-code, or a future admin promote-user route).
+-- Without this, the "update own profile" RLS policy below -- which is correctly scoped to
+-- "own row" but has no column restriction -- would let a signed-in user grant themselves
+-- instructor/admin or paid access by patching their own profile row directly from the
+-- browser, or un-archive themselves after being locked out. auth.role() reflects the
+-- request's JWT role claim: 'service_role' for service-key requests, 'authenticated' for an
+-- ordinary signed-in user.
+create or replace function prevent_self_privilege_escalation()
+returns trigger as $$
+begin
+  if auth.role() = 'service_role' then
+    return new;
+  end if;
+  if new.role is distinct from old.role
+    or new.school_id is distinct from old.school_id
+    or new.access_type is distinct from old.access_type
+    or new.beta_code_used is distinct from old.beta_code_used
+    or new.archived_at is distinct from old.archived_at
+  then
+    raise exception 'role, school_id, access_type, beta_code_used, and archived_at can only be changed by the service role';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create trigger profiles_prevent_self_privilege_escalation
+before update on profiles
+for each row execute function prevent_self_privilege_escalation();
 
 -- Stripe-sourced subscription detail. profiles.access_type stays the simple gate pages
 -- check ('free-trial' | 'lifetime-free' | 'paid'); this table holds the actual status,
@@ -42,10 +94,17 @@ create table beta_codes (
   code text primary key,
   grant_type text not null default 'lifetime-free',
   active boolean not null default true,
+  -- Which role and school this code grants on redemption. A school buying in generates its
+  -- own batch of student codes and (usually one or two) instructor codes against its own
+  -- school_id; a school-level package/expiration can layer on top of this later without
+  -- another schema change.
+  role text not null default 'student' check (role in ('student', 'instructor')),
+  school_id uuid references schools(id),
   created_at timestamptz not null default now()
 );
 
-insert into beta_codes (code, grant_type, active) values ('68C-FTW', 'lifetime-free', true);
+insert into beta_codes (code, grant_type, active, role, school_id)
+values ('68C-FTW', 'lifetime-free', true, 'student', (select id from schools limit 1));
 
 create table critical_thinking_frameworks (
   id uuid primary key default gen_random_uuid(),
@@ -295,7 +354,41 @@ create table raised_hand_messages (
   raised_hand_id uuid not null references raised_hands(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   sender text not null check (sender in ('student', 'instructor')),
+  -- The actual author's id, distinct from user_id (which is always the student's, see above).
+  -- Null for student messages (user_id already says who), set to the replying instructor's id
+  -- for instructor messages -- lets admin see which instructor handled which thread once more
+  -- than one instructor exists.
+  sender_id uuid references auth.users(id),
   body text not null,
+  created_at timestamptz not null default now()
+);
+
+-- General in-app feedback (usability, bugs, suggestions) from a beta tester. No email
+-- collected, ties only to auth.users(id), same privacy posture as raised_hands.
+create table app_feedback (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  category text not null default 'general' check (category in ('general', 'bug', 'suggestion')),
+  body text not null,
+  status text not null default 'new' check (status in ('new', 'reviewed')),
+  -- Feedback escalates exactly one level: a student's submission is visible to instructors
+  -- and admin, an instructor's submission is visible to admin only. Captured from the
+  -- submitter's profiles.role at insert time.
+  sender_role text not null default 'student' check (sender_role in ('student', 'instructor')),
+  created_at timestamptz not null default now()
+);
+
+-- A student flagging a specific question's content (wrong answer key, unclear wording, a
+-- rationale that doesn't match the question) as opposed to Raise Your Hand, which is a
+-- student's own confusion about material they otherwise trust. Separate from raised_hands so
+-- the two review queues don't mix a content-QA task in with a "reply to this student" task.
+create table question_flags (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  question_id uuid not null references questions(id) on delete cascade,
+  reason text not null,
+  status text not null default 'open' check (status in ('open', 'resolved')),
+  sender_role text not null default 'student' check (sender_role in ('student', 'instructor')),
   created_at timestamptz not null default now()
 );
 
@@ -351,6 +444,13 @@ create index on modules (group_id);
 create index on subject_folders (user_id);
 create index on subject_folder_items (subject);
 create index on subscriptions (stripe_customer_id);
+create index on profiles (school_id);
+create index on profiles (archived_at);
+create index on raised_hand_messages (sender_id);
+create index on app_feedback (sender_role);
+create index on question_flags (sender_role);
+create index on schools (access_expires_at);
+create index on schools (archived_at);
 
 create trigger subscriptions_set_updated_at
   before update on subscriptions
@@ -358,6 +458,7 @@ create trigger subscriptions_set_updated_at
 
 -- Row Level Security
 
+alter table schools enable row level security;
 alter table profiles enable row level security;
 alter table beta_codes enable row level security;
 alter table critical_thinking_frameworks enable row level security;
@@ -377,7 +478,13 @@ alter table subject_folders enable row level security;
 alter table subject_folder_items enable row level security;
 alter table subscriptions enable row level security;
 
+create policy "read schools" on schools for select using (true);
+
 create policy "read own profile" on profiles for select using ((select auth.uid()) = id);
+-- Column-level protection for role/school_id/access_type/beta_code_used is enforced by the
+-- prevent_self_privilege_escalation trigger above, not by this policy -- RLS "using" only
+-- controls which ROWS a policy applies to, not which columns, so it can't by itself stop a
+-- user from patching their own row's role to 'admin'.
 create policy "update own profile" on profiles for update using ((select auth.uid()) = id);
 create policy "insert own profile" on profiles for insert with check ((select auth.uid()) = id);
 

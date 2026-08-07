@@ -1,70 +1,19 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getAccessStatus } from "@/lib/access";
+import SubscribeForm from "@/components/subscribe-form";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+// force-dynamic for the same reason as /dashboard: this needs the current archived/expired
+// state on every load, not a cached snapshot from whenever the route was first hit.
+export const dynamic = "force-dynamic";
 
-export default function Subscribe() {
-  const [betaCode, setBetaCode] = useState("");
-  const [error, setError] = useState("");
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const router = useRouter();
+export default async function Subscribe() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in");
 
-  async function startCheckout() {
-    setError("");
-    setCheckoutLoading(true);
-    const res = await fetch("/api/create-checkout-session", { method: "POST" });
-    if (!res.ok) {
-      setCheckoutLoading(false);
-      setError("Something went wrong starting checkout. Try again.");
-      return;
-    }
-    const { url } = await res.json();
-    window.location.href = url;
-  }
+  const { hasAccess, blockReason } = await getAccessStatus(supabase, user.id);
+  if (hasAccess) redirect("/dashboard");
 
-  async function handleBetaCode() {
-    setError("");
-
-    const res = await fetch("/api/redeem-code", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: betaCode }),
-    });
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong. Try again.");
-      return;
-    }
-
-    router.push("/dashboard");
-  }
-
-  return (
-    <div>
-      <h1>Subscribe</h1>
-
-      <div className="card" style={{ marginBottom: "1rem" }}>
-        <h3>$5 / month</h3>
-        <p style={{ margin: "0.3rem 0 0.75rem" }}>
-          14 days free, then $5/month. Cancel any time from your account.
-        </p>
-        <button className="btn btn-primary" onClick={startCheckout} disabled={checkoutLoading}>
-          {checkoutLoading ? "Starting checkout..." : "Start 14-day free trial"}
-        </button>
-      </div>
-
-      <p className="muted" style={{ margin: "1rem 0 0.5rem" }}>Have a beta code instead?</p>
-      <input
-        placeholder="Beta code"
-        value={betaCode}
-        onChange={(e) => setBetaCode(e.target.value)}
-        style={{ marginBottom: "0.75rem" }}
-      />
-      {error && <p className="error-text">{error}</p>}
-      <button className="btn btn-secondary" onClick={handleBetaCode}>
-        Redeem code
-      </button>
-    </div>
-  );
+  return <SubscribeForm blockReason={blockReason} />;
 }

@@ -122,11 +122,79 @@ a {
   font-weight: 600;
   text-decoration: none;
   opacity: 0.85;
+  white-space: nowrap;
 }
 
 .header-nav a:hover {
   opacity: 1;
   color: var(--gold-500);
+}
+
+/* Mobile nav: below this width the horizontal link row stops fitting (it grows every time an
+   admin feature adds a link), so it's replaced by a hamburger menu with the same links. */
+.mobile-nav-menu {
+  display: none;
+  position: relative;
+}
+
+@media (max-width: 640px) {
+  .header-nav {
+    display: none;
+  }
+  .mobile-nav-menu {
+    display: block;
+  }
+}
+
+.mobile-nav-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--cream-100);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.mobile-nav-toggle span {
+  display: block;
+  width: 15px;
+  height: 2px;
+  background: var(--cream-100);
+  border-radius: 2px;
+}
+
+.mobile-nav-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: var(--cream-50);
+  border: 1px solid var(--sage-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 0.6rem;
+  min-width: 190px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mobile-nav-dropdown a {
+  color: var(--olive-900);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  padding: 0.5rem 0.4rem;
+  border-radius: var(--radius);
+}
+
+.mobile-nav-dropdown a:hover {
+  background: var(--cream-100);
 }
 
 .nav-badge {
@@ -539,7 +607,8 @@ a {
 
 input[type="text"],
 input:not([type]),
-textarea {
+textarea,
+select {
   width: 100%;
   padding: 0.65rem 0.75rem;
   border: 1.5px solid var(--sage-200);
@@ -551,7 +620,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--gold-500);
 }

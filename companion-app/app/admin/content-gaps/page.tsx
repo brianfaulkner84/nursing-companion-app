@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getThinTopics, THIN_TOPIC_THRESHOLD } from "@/lib/content-gaps";
+import { getViewer, isAdmin } from "@/lib/roles";
 import ExportCsvButton from "@/components/export-csv-button";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,11 @@ export default async function ContentGaps() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
-  if (!process.env.ADMIN_EMAIL || user.email !== process.env.ADMIN_EMAIL) redirect("/dashboard");
+  // Content/taxonomy management stays admin-only, unlike Review inbox and Review feedback --
+  // an instructor helps run the classroom, but reshaping the question bank stays curriculum
+  // ownership.
+  const viewer = await getViewer(supabase, user);
+  if (!isAdmin(viewer.role)) redirect("/dashboard");
 
   const admin = createAdminClient();
   const thin = await getThinTopics(admin);

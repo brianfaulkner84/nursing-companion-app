@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { getViewer, canReviewStudents } from "@/lib/roles";
 
-// Instructor-only. Gated by comparing the signed-in user's email (already known from Google
-// sign-in, nothing new collected) against ADMIN_EMAIL, an env var only Brian's account
-// matches. No separate admin flag or login exists yet, this is the simplest thing that works
-// for a single-instructor app.
+// Instructor or admin. profiles.role is the source of truth now (see lib/roles.ts); any
+// signed-in instructor can answer any open thread, not just the one admin account.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const { reply } = await request.json();
   if (!reply || !reply.trim()) {
@@ -13,7 +12,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !process.env.ADMIN_EMAIL || user.email !== process.env.ADMIN_EMAIL) {
+  if (!user) return NextResponse.json({ error: "not authorized" }, { status: 403 });
+  const viewer = await getViewer(supabase, user);
+  if (!canReviewStudents(viewer.role)) {
     return NextResponse.json({ error: "not authorized" }, { status: 403 });
   }
 
@@ -34,11 +35,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   // Appended to the thread, same as every other message, so this reply and any that follow
-  // it show up in order alongside the student's messages instead of replacing them.
+  // it show up in order alongside the student's messages instead of replacing them. sender_id
+  // records which instructor actually sent it, distinct from user_id (always the student's,
+  // kept that way for RLS) -- lets admin audit who handled what once more than one instructor
+  // exists.
   await admin.from("raised_hand_messages").insert({
     raised_hand_id: params.id,
     user_id: updated.user_id,
     sender: "instructor",
+    sender_id: user.id,
     body: reply.trim(),
   });
 

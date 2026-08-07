@@ -67,6 +67,12 @@ export default function Help() {
           same way. Each message you send gets a reply in 1 to 2 days. You can also delete any
           message you sent, if you want to take it back.
         </p>
+        <p>
+          Raise your hand is for your own confusion. If you think a question itself is wrong,
+          for example the marked answer looks incorrect or the rationale doesn&apos;t match, use{" "}
+          <strong>Flag this question</strong> on the same answer screen instead. No reply is
+          expected, it just goes straight to the instructor for a content fix.
+        </p>
       </div>
 
       <div className="help-section">
@@ -95,6 +101,15 @@ export default function Help() {
           and forth with the instructor. Open items show &quot;Waiting for a reply&quot;;
           answered ones show &quot;Answered&quot; and the full conversation so far. Keep
           replying from the same thread as long as you need to.
+        </p>
+      </div>
+
+      <div className="help-section">
+        <h2>8. Feedback</h2>
+        <p>
+          The <strong>Feedback</strong> link in the header is for the app itself, not a specific
+          question: bugs, confusing screens, ideas for what would make studying easier. No email
+          is collected, it goes straight to the instructor.
         </p>
       </div>
 
