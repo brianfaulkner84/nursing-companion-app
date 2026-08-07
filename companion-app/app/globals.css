@@ -86,6 +86,7 @@ a {
   padding: 0.9rem 1.25rem;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.6rem;
 }
 
@@ -107,6 +108,71 @@ a {
 
 .site-header .wordmark span {
   color: var(--gold-500);
+}
+
+/* Profile menu */
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--gold-500);
+  color: var(--olive-900);
+  border: none;
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: var(--cream-50);
+  border: 1px solid var(--sage-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 0.75rem;
+  min-width: 200px;
+  z-index: 20;
+}
+
+.profile-email {
+  font-size: 0.8rem;
+  color: var(--sage-600);
+  word-break: break-all;
+  margin-bottom: 0.6rem;
+}
+
+.profile-signout {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--olive-900);
+  background: transparent;
+  color: var(--olive-900);
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.profile-signout:hover:not(:disabled) {
+  background: var(--olive-900);
+  color: var(--cream-50);
+}
+
+.profile-signout:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 /* Buttons */
@@ -233,6 +299,144 @@ a {
   font-size: 0.78rem;
   color: var(--sage-600);
   margin-top: 0.2rem;
+}
+
+/* Sign-in growth banner */
+
+.growth-banner {
+  background: var(--gold-100);
+  border: 1.5px solid var(--gold-500);
+  color: var(--olive-900);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* Dashboard overall progress (bigger than the per-module bars) */
+
+.overall-progress {
+  background: var(--olive-900);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.25rem;
+}
+
+.overall-progress-label {
+  color: var(--cream-100);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.overall-progress-count {
+  color: var(--gold-500);
+  font-weight: 700;
+}
+
+.overall-progress-track {
+  background: var(--olive-700);
+  height: 16px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.overall-progress-fill {
+  background: var(--gold-500);
+  height: 16px;
+}
+
+/* Dashboard browse (tabs, category grid, drill-down) */
+
+.tab-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.5rem 0.4rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--olive-900);
+  background: transparent;
+  color: var(--olive-900);
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-btn-active {
+  background: var(--olive-900);
+  color: var(--cream-100);
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.cat-tile {
+  text-align: left;
+  padding: 0.7rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--sage-200);
+  background: var(--cream-50);
+  color: var(--ink-900);
+  cursor: pointer;
+  font-family: var(--font-body), sans-serif;
+}
+
+.cat-tile-active {
+  border-color: var(--gold-500);
+  background: var(--gold-100);
+}
+
+.cat-tile-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--olive-900);
+}
+
+.cat-tile-meta {
+  font-size: 0.72rem;
+  color: var(--sage-600);
+  margin-top: 0.2rem;
+}
+
+.drill-down {
+  border-top: 1px solid var(--sage-200);
+  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.drill-down-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gold-600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.tile-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-tile {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body), sans-serif;
 }
 
 /* Quiz options */

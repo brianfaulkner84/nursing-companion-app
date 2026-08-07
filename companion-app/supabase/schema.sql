@@ -14,6 +14,27 @@ create table profiles (
   created_at timestamptz not null default now()
 );
 
+-- Stripe-sourced subscription detail. profiles.access_type stays the simple gate pages
+-- check ('free-trial' | 'lifetime-free' | 'paid'); this table holds the actual status,
+-- current period, and price behind that flag. Writes only ever happen through
+-- /api/stripe-webhook using the service role, since only Stripe's own signed events should
+-- change subscription state.
+create table subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  stripe_customer_id text not null,
+  stripe_subscription_id text unique,
+  status text not null default 'incomplete' check (status in (
+    'trialing', 'active', 'past_due', 'canceled', 'incomplete', 'incomplete_expired', 'unpaid'
+  )),
+  price_id text,
+  current_period_end timestamptz,
+  cancel_at_period_end boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id)
+);
+
 -- No public select policy on beta_codes (see RLS section below). Redemption happens
 -- server-side through /api/redeem-code using the service role, so the codes themselves
 -- are never exposed to the browser.
@@ -81,11 +102,74 @@ insert into specialties (name, slug, display_order) values
   ('Pharmacology', 'pharmacology', 2),
   ('OB/GYN', 'ob-gyn', 3);
 
+-- Groups the 21 modules down to a shorter list of top-level dashboard buttons. Most modules
+-- stand alone; a handful of numbered parts of the same topic (Pediatrics I-IV, the two
+-- Cardiovascular modules, ...) collapse into one button that then splits back out.
+create table module_groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  display_order int not null default 0
+);
+
+insert into module_groups (name, display_order) values
+  ('Fundamentals of Nursing', 1),
+  ('Cardiovascular', 11),
+  ('Maternity and Newborn Care', 15),
+  ('Pediatrics', 18);
+
+-- Course modules, for the "By module" dashboard browse view. Named and ordered directly
+-- from the table of contents of the 8 LPN Launchpad study books (Exam 11 through Exam 31),
+-- so the grouping matches what the student already sees in their course materials. group_id
+-- is nullable: an unassigned module still displays as its own standalone button.
+create table modules (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  group_id uuid references module_groups(id),
+  display_order int not null default 0
+);
+
+insert into modules (name, display_order) values
+  ('Fundamentals of Nursing', 1),
+  ('Introduction to Nursing Interventions', 2),
+  ('Fundamentals of Clinical Practice', 3),
+  ('Nursing Across the Lifespan', 4),
+  ('Mental Health Nursing', 5),
+  ('Surgical Nursing and the Musculoskeletal System', 6),
+  ('Integumentary and Gastrointestinal Nursing', 7),
+  ('The Urinary System', 8),
+  ('Blood, Lymphatic, and Immune Systems', 9),
+  ('The Respiratory System', 10),
+  ('Cardiovascular System I', 11),
+  ('Cardiovascular System II', 12),
+  ('Disorders of the Endocrine System', 13),
+  ('The Nervous System', 14),
+  ('Reproductive Health Nursing', 15),
+  ('Nursing Care During Labor and Birth', 16),
+  ('Nursing Care During the Postpartum Period', 17),
+  ('Care of the Pediatric Patient I', 18),
+  ('Care of the Pediatric Patient II', 19),
+  ('Care of the Pediatric Patient III', 20),
+  ('Care of the Pediatric Patient IV', 21);
+
+update modules set group_id = (select id from module_groups where name = 'Fundamentals of Nursing')
+where name in ('Fundamentals of Nursing', 'Introduction to Nursing Interventions', 'Fundamentals of Clinical Practice');
+
+update modules set group_id = (select id from module_groups where name = 'Cardiovascular')
+where name in ('Cardiovascular System I', 'Cardiovascular System II');
+
+update modules set group_id = (select id from module_groups where name = 'Maternity and Newborn Care')
+where name in ('Reproductive Health Nursing', 'Nursing Care During Labor and Birth', 'Nursing Care During the Postpartum Period');
+
+update modules set group_id = (select id from module_groups where name = 'Pediatrics')
+where name in ('Care of the Pediatric Patient I', 'Care of the Pediatric Patient II', 'Care of the Pediatric Patient III', 'Care of the Pediatric Patient IV');
+
 -- One row per distinct questions.subject value, kept in sync by the importer. specialty_id
--- starts null for a new subject; tag it with an update statement, there's no admin UI yet.
+-- and module_id start null for a new subject; tag them with an update statement, there's no
+-- admin UI yet (see supabase/migrations/20260806070000_tag_subjects_with_modules.sql).
 create table subjects (
   name text primary key,
   specialty_id uuid references specialties(id),
+  module_id uuid references modules(id),
   display_order int not null default 0
 );
 
@@ -241,8 +325,15 @@ create index on raised_hands (question_id);
 create index on raised_hands (user_id);
 create index on questions (framework_id);
 create index on subjects (specialty_id);
+create index on subjects (module_id);
+create index on modules (group_id);
 create index on subject_folders (user_id);
 create index on subject_folder_items (subject);
+create index on subscriptions (stripe_customer_id);
+
+create trigger subscriptions_set_updated_at
+  before update on subscriptions
+  for each row execute function set_updated_at();
 
 -- Row Level Security
 
@@ -257,9 +348,12 @@ alter table response_keys enable row level security;
 alter table attempts enable row level security;
 alter table raised_hands enable row level security;
 alter table specialties enable row level security;
+alter table module_groups enable row level security;
+alter table modules enable row level security;
 alter table subjects enable row level security;
 alter table subject_folders enable row level security;
 alter table subject_folder_items enable row level security;
+alter table subscriptions enable row level security;
 
 create policy "read own profile" on profiles for select using ((select auth.uid()) = id);
 create policy "update own profile" on profiles for update using ((select auth.uid()) = id);
@@ -306,6 +400,8 @@ create policy "read own raised hands" on raised_hands for select using ((select 
 create policy "insert own raised hands" on raised_hands for insert with check ((select auth.uid()) = user_id);
 
 create policy "read specialties" on specialties for select using (true);
+create policy "read module groups" on module_groups for select using (true);
+create policy "read modules" on modules for select using (true);
 create policy "read subjects" on subjects for select using (true);
 
 create policy "read own folders" on subject_folders for select using ((select auth.uid()) = user_id);
@@ -321,6 +417,8 @@ create policy "insert own folder items" on subject_folder_items for insert with 
 create policy "delete own folder items" on subject_folder_items for delete using (
   exists (select 1 from subject_folders where subject_folders.id = subject_folder_items.folder_id and subject_folders.user_id = (select auth.uid()))
 );
+
+create policy "read own subscription" on subscriptions for select using ((select auth.uid()) = user_id);
 
 -- Service role (used only inside serverless functions and the import script) bypasses RLS automatically,
 -- so it can read/write draft and unpublished questions, and read beta_codes.

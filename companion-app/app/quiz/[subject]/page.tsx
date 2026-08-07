@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchNextQuestion } from "@/lib/quiz-queries";
+import { hasAccess } from "@/lib/access";
 import QuizClient from "@/components/quiz-client";
 
 export default async function Quiz({ params }: { params: { subject: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
+  if (!(await hasAccess(supabase, user.id))) redirect("/subscribe");
 
   const subject = decodeURIComponent(params.subject);
 

@@ -6,13 +6,17 @@ import { fetchQuestionBreakdown } from "@/lib/quiz-queries";
 export default async function ReviewSessionAnswer({
   searchParams,
 }: {
-  searchParams: { folder?: string; subjects?: string; label?: string; question?: string; selected?: string };
+  searchParams: { folder?: string; subjects?: string; category?: string; itemType?: string; label?: string; question?: string; selected?: string };
 }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
-  const returnParams = searchParams.folder
+  const returnParams = searchParams.category
+    ? `category=${encodeURIComponent(searchParams.category)}&label=${encodeURIComponent(searchParams.label ?? "")}`
+    : searchParams.itemType
+    ? `itemType=${encodeURIComponent(searchParams.itemType)}&label=${encodeURIComponent(searchParams.label ?? "")}`
+    : searchParams.folder
     ? `folder=${searchParams.folder}`
     : `subjects=${searchParams.subjects ?? ""}&label=${searchParams.label ?? ""}`;
   const backHref = `/review-session?${returnParams}`;

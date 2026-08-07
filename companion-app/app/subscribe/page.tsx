@@ -6,9 +6,23 @@ import { useRouter } from "next/navigation";
 export default function Subscribe() {
   const [betaCode, setBetaCode] = useState("");
   const [error, setError] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const router = useRouter();
 
-  async function handleContinue() {
+  async function startCheckout() {
+    setError("");
+    setCheckoutLoading(true);
+    const res = await fetch("/api/create-checkout-session", { method: "POST" });
+    if (!res.ok) {
+      setCheckoutLoading(false);
+      setError("Something went wrong starting checkout. Try again.");
+      return;
+    }
+    const { url } = await res.json();
+    window.location.href = url;
+  }
+
+  async function handleBetaCode() {
     setError("");
 
     const res = await fetch("/api/redeem-code", {
@@ -29,9 +43,18 @@ export default function Subscribe() {
   return (
     <div>
       <h1>Subscribe</h1>
-      <div className="banner banner-correct" style={{ textTransform: "none", fontWeight: 500 }}>
-        Free beta, no plan required right now
+
+      <div className="card" style={{ marginBottom: "1rem" }}>
+        <h3>$5 / month</h3>
+        <p style={{ margin: "0.3rem 0 0.75rem" }}>
+          14 days free, then $5/month. Cancel any time from your account.
+        </p>
+        <button className="btn btn-primary" onClick={startCheckout} disabled={checkoutLoading}>
+          {checkoutLoading ? "Starting checkout..." : "Start 14-day free trial"}
+        </button>
       </div>
+
+      <p className="muted" style={{ margin: "1rem 0 0.5rem" }}>Have a beta code instead?</p>
       <input
         placeholder="Beta code"
         value={betaCode}
@@ -39,8 +62,8 @@ export default function Subscribe() {
         style={{ marginBottom: "0.75rem" }}
       />
       {error && <p className="error-text">{error}</p>}
-      <button className="btn btn-primary" onClick={handleContinue}>
-        Continue
+      <button className="btn btn-secondary" onClick={handleBetaCode}>
+        Redeem code
       </button>
     </div>
   );
