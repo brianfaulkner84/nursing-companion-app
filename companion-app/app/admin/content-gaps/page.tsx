@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getThinTopics, THIN_TOPIC_THRESHOLD } from "@/lib/content-gaps";
+import ExportCsvButton from "@/components/export-csv-button";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,16 @@ export default async function ContentGaps() {
         should get merged into a shared subject instead of padded out on their own, the way
         the Pharmacology drug classes did.
       </p>
+
+      {thin.length > 0 && (
+        <div style={{ marginBottom: "1rem" }}>
+          <ExportCsvButton
+            filename="content-gaps.csv"
+            headers={["Subject", "Module", "Question count"]}
+            rows={thin.map((t) => [t.subject, t.moduleName, t.count])}
+          />
+        </div>
+      )}
 
       {thin.length === 0 ? (
         <p className="muted">Nothing under {THIN_TOPIC_THRESHOLD} questions right now.</p>
