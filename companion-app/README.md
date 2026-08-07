@@ -9,10 +9,26 @@ with beta codes for early access.
 ## Scheduled piece
 
 `app/api/cron/raised-hand-reminder/route.ts`, triggered daily at 13:00 UTC by Vercel
-Cron (`vercel.json`). It queries `raised_hands` for anything still open after 2 days
-and, if `RESEND_API_KEY` is set, emails a summary so nothing silently ages out past a
-1 to 2 business day response goal. Authenticated with `CRON_SECRET`, which Vercel
-sends automatically as a bearer token when it fires the job.
+Cron (`vercel.json`). This is the escalation net, not an instructor's primary
+notification -- an instructor sees new raised hands the moment they open
+`/admin/inbox`, this route only exists to catch the ones nobody got to. It queries
+`raised_hands` for anything still open past a 24-hour SLA and, if `RESEND_API_KEY` is
+set, emails `NOTIFY_EMAIL` one deep link per thread straight into
+`/admin/inbox?thread=<id>`, which scrolls to and highlights that exact conversation on
+load. Authenticated with `CRON_SECRET`, which Vercel sends automatically as a bearer
+token when it fires the job.
+
+Because this only runs once a day, the true worst case for a hand raised right after
+that day's run is closer to 48 hours before this catches it, not a clean 24 -- Vercel
+Cron on the free/Hobby tier only allows once-a-day schedules. Running it every few
+hours for a tighter SLA needs a paid Vercel plan; worth it once there are enough
+schools that a daily check isn't fast enough, not before.
+
+`NOTIFY_EMAIL` should always be a personal inbox, never a public-facing address. It's
+never shown to students or instructors anywhere in the app (the outgoing sender
+address students would ever see is `questions@lpnlaunchpad.com`, a completely separate
+thing from where these system emails land), so there's no reason to route it through a
+public alias, and doing so only risks pulling in mail unrelated to the app.
 
 ## On-demand piece
 
@@ -22,9 +38,9 @@ selected answer, the strategy walkthrough, and the student's note into a prompt,
 calls Claude (Haiku) to draft a reply in an instructor's voice addressing the
 student's specific confusion, not just repeating the rationale. The draft is saved to
 `raised_hands.claude_draft_reply` and queued in the instructor's in-app review
-inbox — it is never sent to the student automatically. A header badge (gated to
-whichever Google account matches `ADMIN_EMAIL`) shows the open-thread count, and the
-instructor reviews and edits the draft at `/admin/inbox` and sends it from there;
+inbox — it is never sent to the student automatically. A header badge (shown to
+instructor and admin roles, see [Roles and schools](#roles-and-schools)) shows the
+open-thread count, and the instructor reviews and edits the draft at `/admin/inbox` and sends it from there;
 `/api/raised-hands/[id]/respond` writes the final reply and marks the thread
 resolved. The student sees it on their own `/inbox` page — no student or instructor
 email address is ever exchanged in-app. (An optional email nudge exists too: if
@@ -74,6 +90,14 @@ Only one school exists today (seeded by the migration), but `schools` and `profi
 tables full of real student data later would be a much riskier migration than building it in
 now while nothing's live. There's no admin UI for multi-school yet, that's still worth
 building once a second real school shows up.
+
+**Brian's own admin access is permanent, not just database state.** `lib/roles.ts`
+checks `ADMIN_EMAIL` on every request and forces `role` to `'admin'` for a matching
+signed-in email regardless of what `profiles.role` says in the database. `profiles.role`
+is set to `'admin'` for that account too (belt-and-suspenders), but even if that row were
+ever wrong, corrupted by a bad migration, or changed by a manual SQL mistake, the
+`ADMIN_EMAIL` check still wins. The only way to actually lose this is unsetting
+`ADMIN_EMAIL` in Vercel.
 
 Role and school are set on beta-code redemption (`/api/redeem-code`), never by the user
 directly — the `prevent_self_privilege_escalation` trigger in `schema.sql` blocks a signed-in

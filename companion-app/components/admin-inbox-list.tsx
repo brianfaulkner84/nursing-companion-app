@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Message = {
@@ -22,12 +22,24 @@ export default function AdminInboxList({
   openThreads,
   resolvedThreads,
   showInstructorNames = false,
+  highlightId = null,
 }: {
   openThreads: Thread[];
   resolvedThreads: Thread[];
   showInstructorNames?: boolean;
+  highlightId?: string | null;
 }) {
   const router = useRouter();
+
+  // Deep link from the 24-hour escalation email lands here as ?thread=<id>. Scroll straight to
+  // it and outline it, whether it's still open or someone already answered it by the time Brian
+  // clicks through, so the email is genuinely "one tap to the exact spot," not "one tap to a
+  // list you then have to search."
+  useEffect(() => {
+    if (!highlightId) return;
+    const el = document.getElementById(`thread-${highlightId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId]);
   const [drafts, setDrafts] = useState<Record<string, string>>(
     Object.fromEntries(
       openThreads.map((t) => {
@@ -73,7 +85,12 @@ export default function AdminInboxList({
           {openThreads.map((t) => {
             const alreadyReplied = t.messages.some((m) => m.sender === "instructor");
             return (
-              <div key={t.id} className="card">
+              <div
+                key={t.id}
+                id={`thread-${t.id}`}
+                className="card"
+                style={t.id === highlightId ? { outline: "3px solid var(--gold-100)", outlineOffset: "2px" } : undefined}
+              >
                 <p className="tile-title" style={{ marginBottom: "0.3rem" }}>{t.subject}</p>
                 <p className="tile-meta" style={{ marginBottom: "0.6rem" }}>{t.questionText}</p>
 
@@ -128,7 +145,12 @@ export default function AdminInboxList({
       ) : (
         <div className="tile-stack">
           {resolvedThreads.map((t) => (
-            <div key={t.id} className="card">
+            <div
+              key={t.id}
+              id={`thread-${t.id}`}
+              className="card"
+              style={t.id === highlightId ? { outline: "3px solid var(--gold-100)", outlineOffset: "2px" } : undefined}
+            >
               <p className="tile-title" style={{ marginBottom: "0.5rem" }}>{t.subject}</p>
               {t.messages.map((m) => (
                 <div key={m.id} className={`message-bubble ${m.sender === "instructor" ? "card-dark" : "card"}`}>

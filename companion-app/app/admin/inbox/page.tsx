@@ -6,7 +6,11 @@ import AdminInboxList from "@/components/admin-inbox-list";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminInbox() {
+export default async function AdminInbox({
+  searchParams,
+}: {
+  searchParams: { thread?: string };
+}) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
@@ -95,6 +99,7 @@ export default async function AdminInbox() {
         openThreads={withMessages(openHands ?? [])}
         resolvedThreads={withMessages(resolvedHands ?? [])}
         showInstructorNames={viewer.role === "admin"}
+        highlightId={searchParams.thread ?? null}
       />
       <Link href="/dashboard" className="back-link">&larr; Back to dashboard</Link>
     </div>
