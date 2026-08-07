@@ -61,6 +61,12 @@ export default function Help() {
           explanation, not a form response. Replies show up in your <Link href="/inbox">Inbox</Link>,
           not your email, so check back there in a day or two.
         </p>
+        <p>
+          It&apos;s a real conversation, not a one-time message. If the reply doesn&apos;t
+          fully clear things up, reply again from your Inbox and the instructor sees it the
+          same way. Each message you send gets a reply in 1 to 2 days. You can also delete any
+          message you sent, if you want to take it back.
+        </p>
       </div>
 
       <div className="help-section">
@@ -85,9 +91,10 @@ export default function Help() {
       <div className="help-section">
         <h2>7. Inbox</h2>
         <p>
-          Every question you&apos;ve raised your hand on lives here, along with the instructor&apos;s
-          reply once it&apos;s ready. Open items show &quot;Waiting for a reply&quot;; answered
-          ones show the full response.
+          Every question you&apos;ve raised your hand on lives here, along with the full back
+          and forth with the instructor. Open items show &quot;Waiting for a reply&quot;;
+          answered ones show &quot;Answered&quot; and the full conversation so far. Keep
+          replying from the same thread as long as you need to.
         </p>
       </div>
 

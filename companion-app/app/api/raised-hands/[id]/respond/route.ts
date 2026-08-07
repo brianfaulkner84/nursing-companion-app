@@ -18,16 +18,29 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const admin = createAdminClient();
-  const { error } = await admin
+  const { data: updated, error } = await admin
     .from("raised_hands")
     .update({
       sent_reply: reply.trim(),
       status: "resolved",
       answered_at: new Date().toISOString(),
     })
-    .eq("id", params.id);
+    .eq("id", params.id)
+    .select("user_id")
+    .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !updated) {
+    return NextResponse.json({ error: error?.message ?? "thread not found" }, { status: 500 });
+  }
+
+  // Appended to the thread, same as every other message, so this reply and any that follow
+  // it show up in order alongside the student's messages instead of replacing them.
+  await admin.from("raised_hand_messages").insert({
+    raised_hand_id: params.id,
+    user_id: updated.user_id,
+    sender: "instructor",
+    body: reply.trim(),
+  });
 
   return NextResponse.json({ ok: true });
 }

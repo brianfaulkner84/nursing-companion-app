@@ -24,9 +24,19 @@ student's specific confusion, not just repeating the rationale. The draft is sav
 `raised_hands.claude_draft_reply` and emailed to the instructor for review — it is
 never sent to the student automatically. The instructor reviews and edits the draft at
 `/admin/inbox` (gated to whichever Google account matches `ADMIN_EMAIL`) and sends it
-from there; `/api/raised-hands/[id]/respond` writes the final reply to
-`raised_hands.sent_reply` and marks the row resolved. The student sees it on their own
-`/inbox` page — no student or instructor email address is ever exchanged in-app.
+from there; `/api/raised-hands/[id]/respond` writes the final reply and marks the
+thread resolved. The student sees it on their own `/inbox` page — no student or
+instructor email address is ever exchanged in-app.
+
+This is an ongoing thread, not a single message and reply. Every message either side
+sends is a row in `raised_hand_messages` (`/api/raised-hands/[id]/reply` for the
+student, the respond route above for the instructor); a student reply reopens the
+thread, which is what puts it back in front of the instructor at `/admin/inbox`.
+Students can delete their own messages (`/api/raised-hand-messages/[id]`, DELETE);
+instructor messages can't be deleted this way, checked server-side. `/admin/inbox`
+also has a "Clear replied" button (`/api/raised-hands/clear-replied`) that hides
+answered threads from the instructor's queue via `raised_hands.archived_by_instructor`
+— it never touches the underlying rows, so the student's own Inbox is unaffected.
 
 ## Data model
 

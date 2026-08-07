@@ -601,6 +601,47 @@ label {
   border: 1px solid var(--gold-500);
 }
 
+.msg-delete {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--wine-600);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.msg-delete:hover:not(:disabled) {
+  opacity: 0.75;
+}
+
+.msg-delete:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.message-bubble {
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius);
+  margin-bottom: 0.4rem;
+}
+
+.message-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.message-sender {
+  font-weight: 600;
+  font-size: 0.78rem;
+  margin-bottom: 0.15rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* Help page */
 
 .help-section {

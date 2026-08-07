@@ -72,7 +72,9 @@ export async function POST(request: Request) {
         `Rationale already shown to the student: ${question.correct_answer_rationale}\n` +
         `Student's selected answer(s): ${selectedOptions.map((o: any) => o.option_label).join(", ")}\n` +
         `Student's note: ${note || "(no note provided)"}\n\n` +
-        `Write a short reply (3 to 6 sentences) addressing their specific confusion, not just repeating the rationale.`,
+        `Write a short reply (3 to 6 sentences) addressing their specific confusion, not just repeating the rationale. ` +
+        `Plain text only: no Markdown, no headers, no asterisks for bold or italics, no bullet points. ` +
+        `Write it exactly as it should appear to the student, since it is shown as-is with no formatting applied.`,
     }],
   });
 
@@ -81,16 +83,33 @@ export async function POST(request: Request) {
     .map((block: any) => block.text)
     .join("\n");
 
-  await admin.from("raised_hands").insert({
-    user_id: user.id,
-    question_id: questionId,
-    selected_option_ids: selectedIds,
-    strategy_snapshot: strategySnapshot,
-    rationale_snapshot: question.correct_answer_rationale,
-    student_note: note,
-    claude_draft_reply: draftReply,
-    status: "open",
-  });
+  const { data: inserted, error: insertError } = await admin
+    .from("raised_hands")
+    .insert({
+      user_id: user.id,
+      question_id: questionId,
+      selected_option_ids: selectedIds,
+      strategy_snapshot: strategySnapshot,
+      rationale_snapshot: question.correct_answer_rationale,
+      student_note: note,
+      claude_draft_reply: draftReply,
+      status: "open",
+    })
+    .select("id")
+    .single();
+  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+
+  // This is the thread's first message. Everything after it, both directions, gets appended
+  // here instead of overwriting a single note/reply pair, so the student and instructor can
+  // keep going back and forth on the same question.
+  if (note && note.trim()) {
+    await admin.from("raised_hand_messages").insert({
+      raised_hand_id: inserted.id,
+      user_id: user.id,
+      sender: "student",
+      body: note.trim(),
+    });
+  }
 
   // Email Brian the draft reply for approval or editing. Swap in Resend or similar once that account exists.
   if (process.env.RESEND_API_KEY) {

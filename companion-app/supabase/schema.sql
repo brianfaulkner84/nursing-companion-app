@@ -282,7 +282,20 @@ create table raised_hands (
   sent_reply text,
   status text not null default 'open' check (status in ('open', 'resolved')),
   created_at timestamptz not null default now(),
-  answered_at timestamptz
+  answered_at timestamptz,
+  archived_by_instructor boolean not null default false
+);
+
+-- The ongoing back-and-forth on a raised hand. user_id is always the STUDENT's id, even on
+-- instructor messages, so one RLS policy covers reading every message in a student's own
+-- thread. All writes go through service-role API routes.
+create table raised_hand_messages (
+  id uuid primary key default gen_random_uuid(),
+  raised_hand_id uuid not null references raised_hands(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  sender text not null check (sender in ('student', 'instructor')),
+  body text not null,
+  created_at timestamptz not null default now()
 );
 
 -- A student-built, named set of subjects ("My Exam 2 Review"). The Full/Pediatrics/
@@ -328,6 +341,8 @@ create index on attempts (interaction_id);
 create index on attempts (user_id);
 create index on raised_hands (question_id);
 create index on raised_hands (user_id);
+create index on raised_hand_messages (raised_hand_id);
+create index on raised_hand_messages (user_id);
 create index on questions (framework_id);
 create index on subjects (specialty_id);
 create index on subjects (module_id);
@@ -352,6 +367,7 @@ alter table question_options enable row level security;
 alter table response_keys enable row level security;
 alter table attempts enable row level security;
 alter table raised_hands enable row level security;
+alter table raised_hand_messages enable row level security;
 alter table specialties enable row level security;
 alter table module_groups enable row level security;
 alter table modules enable row level security;
@@ -403,6 +419,7 @@ create policy "delete own attempts" on attempts for delete using ((select auth.u
 
 create policy "read own raised hands" on raised_hands for select using ((select auth.uid()) = user_id);
 create policy "insert own raised hands" on raised_hands for insert with check ((select auth.uid()) = user_id);
+create policy "read own thread messages" on raised_hand_messages for select using ((select auth.uid()) = user_id);
 
 create policy "read specialties" on specialties for select using (true);
 create policy "read module groups" on module_groups for select using (true);

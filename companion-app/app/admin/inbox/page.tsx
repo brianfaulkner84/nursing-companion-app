@@ -12,29 +12,55 @@ export default async function AdminInbox() {
   if (!process.env.ADMIN_EMAIL || user.email !== process.env.ADMIN_EMAIL) redirect("/dashboard");
 
   const admin = createAdminClient();
-  const { data: hands } = await admin
+
+  const { data: openHands } = await admin
     .from("raised_hands")
-    .select("id, student_note, claude_draft_reply, created_at, questions(subject, question_text)")
+    .select("id, created_at, claude_draft_reply, questions(subject, question_text)")
     .eq("status", "open")
     .order("created_at", { ascending: true });
 
-  const rows = (hands ?? []).map((h: any) => ({
-    id: h.id,
-    student_note: h.student_note,
-    claude_draft_reply: h.claude_draft_reply,
-    created_at: h.created_at,
-    subject: h.questions?.subject ?? "Question",
-    question_text: h.questions?.question_text ?? "",
-  }));
+  const { data: resolvedHands } = await admin
+    .from("raised_hands")
+    .select("id, created_at, answered_at, questions(subject, question_text)")
+    .eq("status", "resolved")
+    .eq("archived_by_instructor", false)
+    .order("answered_at", { ascending: false });
+
+  const allIds = [
+    ...(openHands ?? []).map((h: any) => h.id),
+    ...(resolvedHands ?? []).map((h: any) => h.id),
+  ];
+
+  const { data: messages } =
+    allIds.length > 0
+      ? await admin
+          .from("raised_hand_messages")
+          .select("id, raised_hand_id, sender, body, created_at")
+          .in("raised_hand_id", allIds)
+          .order("created_at", { ascending: true })
+      : { data: [] as any[] };
+
+  function withMessages(hands: any[]) {
+    return hands.map((h) => ({
+      id: h.id,
+      subject: h.questions?.subject ?? "Question",
+      questionText: h.questions?.question_text ?? "",
+      claudeDraftReply: h.claude_draft_reply ?? null,
+      messages: (messages ?? []).filter((m: any) => m.raised_hand_id === h.id),
+    }));
+  }
 
   return (
     <div>
       <h1>Review inbox</h1>
       <p className="muted" style={{ marginBottom: "1rem" }}>
-        Open raised hands, oldest first. Edit Claude&apos;s draft as needed before sending, it
-        goes straight to the student&apos;s own Inbox, no email involved.
+        Replies go straight to the student&apos;s own Inbox, no email involved. A thread
+        reopens here automatically if the student replies again after you&apos;ve answered it.
       </p>
-      <AdminInboxList initialHands={rows} />
+      <AdminInboxList
+        openThreads={withMessages(openHands ?? [])}
+        resolvedThreads={withMessages(resolvedHands ?? [])}
+      />
       <Link href="/dashboard" className="back-link">&larr; Back to dashboard</Link>
     </div>
   );
