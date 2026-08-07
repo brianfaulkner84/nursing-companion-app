@@ -3,7 +3,15 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Lazily constructed, not a top-level `new Anthropic(...)`: Next.js imports every API route
+// module at build time to collect page data, before Vercel secrets are necessarily set, and
+// an eagerly-constructed client with a missing key can throw right then and take the whole
+// build down (this happened to the Stripe client, see lib/stripe.ts).
+let cached: Anthropic | null = null;
+function getAnthropic(): Anthropic {
+  if (!cached) cached = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return cached;
+}
 
 export async function POST(request: Request) {
   const { questionId, selected, note } = await request.json();
@@ -50,7 +58,7 @@ export async function POST(request: Request) {
 
   // Live Claude call: draft a reply in Brian's classroom voice, for him to approve or edit before it goes to the student.
   // Haiku is the cheapest model and plenty for a short, templated draft reply like this.
-  const completion = await anthropic.messages.create({
+  const completion = await getAnthropic().messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 400,
     messages: [{

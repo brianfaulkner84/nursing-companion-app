@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 
 // Starts a Stripe Checkout session for the $5/mo plan with a 14-day trial baked in.
 // Stripe hosts the actual payment page, no card data ever touches this app.
@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "not signed in" }, { status: 401 });
 
   const origin = new URL(request.url).origin;
+  const stripe = getStripe();
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
