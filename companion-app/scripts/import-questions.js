@@ -29,22 +29,54 @@ async function resolveFrameworkId(name) {
   return data.id;
 }
 
+function validate(q) {
+  const problems = [];
+
+  if (!q.title) problems.push("missing title");
+  if (!q.secondary_category) problems.push("missing secondary_category");
+
+  const options = q.options ?? [];
+  const labels = options.map((o) => o.label);
+  const uniqueLabels = new Set(labels);
+  if (uniqueLabels.size !== labels.length) problems.push("duplicate option labels");
+
+  const correctCount = options.filter((o) => o.is_correct).length;
+  if (correctCount === 0) problems.push("no option marked is_correct");
+  if (q.question_type !== "multiple_select" && correctCount > 1) {
+    problems.push(`single_select question has ${correctCount} correct options`);
+  }
+
+  for (const o of options) {
+    if (!o.is_correct && !o.rationale) {
+      problems.push(`option ${o.label} is incorrect but has no rationale`);
+    }
+  }
+
+  return problems;
+}
+
 async function main() {
   const questions = JSON.parse(fs.readFileSync(file, "utf-8"));
   let imported = 0;
   let failed = 0;
 
   for (const q of questions) {
+    const label = q.title ?? q.question_text?.slice(0, 40) ?? "(untitled)";
     try {
+      const problems = validate(q);
+      if (problems.length > 0) {
+        throw new Error(problems.join("; "));
+      }
+
       const frameworkId = await resolveFrameworkId(q.framework);
 
       const { data: inserted, error: qError } = await supabase
         .from("questions")
         .insert({
-          title: q.title ?? null,
+          title: q.title,
           subject: q.subject,
           primary_category: q.primary_category,
-          secondary_category: q.secondary_category ?? null,
+          secondary_category: q.secondary_category,
           question_type: q.question_type ?? "single_select",
           question_text: q.question_text,
           correct_answer_rationale: q.correct_answer_rationale,
@@ -56,6 +88,7 @@ async function main() {
           framework_application: q.framework_application ?? "",
           source_subject_tag: q.source_subject_tag ?? null,
           source_question_number: q.source_question_number ?? null,
+          review_status: "approved",
           is_published: true,
         })
         .select("id")
@@ -78,7 +111,7 @@ async function main() {
       imported++;
     } catch (err) {
       failed++;
-      console.error(`Failed on "${q.title ?? q.question_text?.slice(0, 40)}": ${err.message}`);
+      console.error(`Failed on "${label}": ${err.message}`);
     }
   }
 

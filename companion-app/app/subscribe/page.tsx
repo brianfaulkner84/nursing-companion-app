@@ -2,36 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 export default function Subscribe() {
   const [betaCode, setBetaCode] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
-  const supabase = createClient();
 
   async function handleContinue() {
     setError("");
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
 
-    const trimmed = betaCode.trim().toUpperCase();
-    if (trimmed) {
-      const { data: code } = await supabase
-        .from("beta_codes")
-        .select("code, grant_type, active")
-        .eq("code", trimmed)
-        .maybeSingle();
+    const res = await fetch("/api/redeem-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: betaCode }),
+    });
 
-      if (!code || !code.active) {
-        setError("That beta code isn't valid.");
-        return;
-      }
-
-      await supabase
-        .from("profiles")
-        .update({ beta_code_used: trimmed, access_type: "lifetime-free" })
-        .eq("id", user.id);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong. Try again.");
+      return;
     }
 
     router.push("/dashboard");
