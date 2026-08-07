@@ -149,7 +149,11 @@ insert into modules (name, display_order) values
   ('Care of the Pediatric Patient I', 18),
   ('Care of the Pediatric Patient II', 19),
   ('Care of the Pediatric Patient III', 20),
-  ('Care of the Pediatric Patient IV', 21);
+  ('Care of the Pediatric Patient IV', 21),
+  -- Not from a book table of contents like the rest: catches drug-class subjects
+  -- (Antibiotics, Anticoagulants, ...) that cut across body systems rather than
+  -- belonging to one chapter. See 20260806100000_backfill_and_tag_remaining_subjects.sql.
+  ('Pharmacology', 22);
 
 update modules set group_id = (select id from module_groups where name = 'Fundamentals of Nursing')
 where name in ('Fundamentals of Nursing', 'Introduction to Nursing Interventions', 'Fundamentals of Clinical Practice');

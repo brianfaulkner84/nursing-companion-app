@@ -9,6 +9,10 @@ const SPECIALTIES = [
   { name: "OB/GYN", slug: "ob-gyn" },
 ];
 
+// See app/dashboard/page.tsx for why this is needed: without it, Next.js can cache the
+// subjects query and this page stops reflecting new subjects/tags until a redeploy.
+export const dynamic = "force-dynamic";
+
 export default async function Exams() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

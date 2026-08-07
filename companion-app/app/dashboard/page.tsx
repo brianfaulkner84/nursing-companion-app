@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { hasAccess } from "@/lib/access";
 import DashboardBrowser from "@/components/dashboard-browser";
 
+// Without this, Next.js can cache the Supabase fetch responses (subjects/modules in
+// particular) at the Data Cache layer and keep serving a stale snapshot from whenever the
+// route was first hit after deploy, even though the page itself re-renders per request. That
+// produced a real bug: tagging subjects in Supabase had no visible effect on this dashboard
+// until a redeploy. force-dynamic guarantees every request refetches everything.
+export const dynamic = "force-dynamic";
+
 export default async function Dashboard() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
