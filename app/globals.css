@@ -1,0 +1,761 @@
+/* LPN Launchpad brand system, pulled from the Design Packet and logo: dark olive as the
+   branded/emphasis color, warm cream as the readable study background, gold as the primary
+   accent, sage as a muted secondary, wine reserved for incorrect/critical states. */
+
+:root {
+  --olive-950: #171f0c;
+  --olive-900: #202b12;
+  --olive-800: #2c3a19;
+  --olive-700: #3a4a22;
+  --sage-600: #6f7d57;
+  --sage-400: #93a37c;
+  --sage-200: #d3dcc4;
+  --gold-500: #d9a521;
+  --gold-600: #b98c1a;
+  --gold-100: #f7e6b8;
+  --cream-100: #f7f3c8;
+  --cream-50: #fdfced;
+  --wine-600: #a31450;
+  --wine-100: #f3d3e0;
+  --ink-900: #1c2410;
+
+  --radius: 10px;
+  --shadow-card: 0 1px 3px rgba(28, 36, 16, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--cream-100);
+  color: var(--ink-900);
+  font-family: var(--font-body), -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--olive-900);
+  line-height: 1.15;
+  margin: 0 0 0.6rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+h3 {
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  color: var(--gold-600);
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+a {
+  color: inherit;
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 3rem;
+}
+
+/* Header */
+
+.site-header {
+  background: var(--olive-900);
+  padding: 0.9rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.site-header img {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  display: block;
+}
+
+.site-header .wordmark {
+  font-family: var(--font-heading), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cream-100);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.site-header .wordmark span {
+  color: var(--gold-500);
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.header-nav a {
+  color: var(--cream-100);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.header-nav a:hover {
+  opacity: 1;
+  color: var(--gold-500);
+}
+
+/* Mobile nav: below this width the horizontal link row stops fitting (it grows every time an
+   admin feature adds a link), so it's replaced by a hamburger menu with the same links. */
+.mobile-nav-menu {
+  display: none;
+  position: relative;
+}
+
+@media (max-width: 640px) {
+  .header-nav {
+    display: none;
+  }
+  .mobile-nav-menu {
+    display: block;
+  }
+}
+
+.mobile-nav-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--cream-100);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.mobile-nav-toggle span {
+  display: block;
+  width: 15px;
+  height: 2px;
+  background: var(--cream-100);
+  border-radius: 2px;
+}
+
+.mobile-nav-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: var(--cream-50);
+  border: 1px solid var(--sage-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 0.6rem;
+  min-width: 190px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mobile-nav-dropdown a {
+  color: var(--olive-900);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  padding: 0.5rem 0.4rem;
+  border-radius: var(--radius);
+}
+
+.mobile-nav-dropdown a:hover {
+  background: var(--cream-100);
+}
+
+.nav-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--gold-500);
+  color: var(--olive-900);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Profile menu */
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--gold-500);
+  color: var(--olive-900);
+  border: none;
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: var(--cream-50);
+  border: 1px solid var(--sage-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 0.75rem;
+  min-width: 200px;
+  z-index: 20;
+}
+
+.profile-email {
+  font-size: 0.8rem;
+  color: var(--sage-600);
+  word-break: break-all;
+  margin-bottom: 0.6rem;
+}
+
+.profile-signout {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--olive-900);
+  background: transparent;
+  color: var(--olive-900);
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.profile-signout:hover:not(:disabled) {
+  background: var(--olive-900);
+  color: var(--cream-50);
+}
+
+.profile-signout:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Buttons */
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius);
+  border: none;
+  font-family: var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: transform 0.05s ease, opacity 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.btn-primary {
+  background: var(--gold-500);
+  color: var(--olive-900);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--gold-600);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--olive-900);
+  border: 1.5px solid var(--olive-900);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--olive-900);
+  color: var(--cream-50);
+}
+
+.btn-outline {
+  background: var(--cream-50);
+  color: var(--olive-900);
+  border: 1.5px solid var(--sage-400);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--olive-900);
+}
+
+.btn-small {
+  width: auto;
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.btn-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-row .btn {
+  flex: 1;
+}
+
+/* Cards */
+
+.card {
+  background: var(--cream-50);
+  border: 1px solid var(--sage-200);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.card-dark {
+  background: var(--olive-900);
+  color: var(--cream-100);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.card-dark summary {
+  color: var(--gold-100);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.card-dark ol,
+.card-dark ul {
+  color: var(--cream-100);
+}
+
+.tile {
+  display: block;
+  background: var(--cream-50);
+  border: 1px solid var(--sage-200);
+  border-radius: var(--radius);
+  padding: 0.85rem;
+  text-decoration: none;
+  color: var(--ink-900);
+  transition: border-color 0.15s ease;
+}
+
+.tile:hover {
+  border-color: var(--gold-500);
+}
+
+.tile-title {
+  font-weight: 600;
+  color: var(--olive-900);
+}
+
+.tile-meta {
+  font-size: 0.78rem;
+  color: var(--sage-600);
+  margin-top: 0.2rem;
+}
+
+/* Sign-in growth banner */
+
+.growth-banner {
+  background: var(--gold-100);
+  border: 1.5px solid var(--gold-500);
+  color: var(--olive-900);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* Dashboard overall progress (bigger than the per-module bars) */
+
+.overall-progress {
+  background: var(--olive-900);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.25rem;
+}
+
+.overall-progress-label {
+  color: var(--cream-100);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.overall-progress-count {
+  color: var(--gold-500);
+  font-weight: 700;
+}
+
+.overall-progress-track {
+  background: var(--olive-700);
+  height: 16px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.overall-progress-fill {
+  background: var(--gold-500);
+  height: 16px;
+}
+
+/* Dashboard browse (tabs, category grid, drill-down) */
+
+.tab-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.5rem 0.4rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--olive-900);
+  background: transparent;
+  color: var(--olive-900);
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-btn-active {
+  background: var(--olive-900);
+  color: var(--cream-100);
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.cat-tile {
+  text-align: left;
+  padding: 0.7rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--sage-200);
+  background: var(--cream-50);
+  color: var(--ink-900);
+  cursor: pointer;
+  font-family: var(--font-body), sans-serif;
+}
+
+.cat-tile-active {
+  border-color: var(--gold-500);
+  background: var(--gold-100);
+}
+
+.cat-tile-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--olive-900);
+}
+
+.cat-tile-meta {
+  font-size: 0.72rem;
+  color: var(--sage-600);
+  margin-top: 0.2rem;
+}
+
+.drill-down {
+  border-top: 1px solid var(--sage-200);
+  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.drill-down-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gold-600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.tile-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-tile {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body), sans-serif;
+}
+
+/* Quiz options */
+
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.5rem;
+  background: var(--cream-50);
+  border: 1.5px solid var(--sage-200);
+  border-radius: var(--radius);
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.95rem;
+  color: var(--ink-900);
+  cursor: pointer;
+}
+
+.option.selected {
+  border-color: var(--gold-500);
+  background: var(--gold-100);
+}
+
+.option-label {
+  display: inline-block;
+  min-width: 1.4rem;
+  font-weight: 700;
+  color: var(--olive-900);
+}
+
+/* Banners */
+
+.banner {
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.75rem;
+}
+
+.banner-correct {
+  background: var(--gold-100);
+  color: var(--olive-900);
+  border: 1.5px solid var(--gold-500);
+}
+
+.banner-incorrect {
+  background: var(--wine-100);
+  color: var(--wine-600);
+  border: 1.5px solid var(--wine-600);
+}
+
+/* Progress */
+
+.progress-track {
+  background: var(--sage-200);
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: var(--gold-500);
+  height: 8px;
+}
+
+/* Forms */
+
+input[type="text"],
+input:not([type]),
+textarea,
+select {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1.5px solid var(--sage-200);
+  border-radius: var(--radius);
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.95rem;
+  background: var(--cream-50);
+  color: var(--ink-900);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--gold-500);
+}
+
+label {
+  font-size: 0.9rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.error-text {
+  color: var(--wine-600);
+  font-size: 0.9rem;
+}
+
+.muted {
+  color: var(--sage-600);
+  font-size: 0.85rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 1.25rem;
+  color: var(--olive-900);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--gold-600);
+}
+
+/* Inbox */
+
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.status-badge-open {
+  background: var(--sage-200);
+  color: var(--olive-900);
+}
+
+.status-badge-answered {
+  background: var(--gold-100);
+  color: var(--olive-900);
+  border: 1px solid var(--gold-500);
+}
+
+.msg-delete {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--wine-600);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.msg-delete:hover:not(:disabled) {
+  opacity: 0.75;
+}
+
+.msg-delete:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.message-bubble {
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius);
+  margin-bottom: 0.4rem;
+}
+
+.message-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.message-sender {
+  font-weight: 600;
+  font-size: 0.78rem;
+  margin-bottom: 0.15rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Help page */
+
+.help-section {
+  margin-bottom: 1.75rem;
+}
+
+.help-section h2 {
+  margin-bottom: 0.3rem;
+}
+
+.help-section p {
+  margin-bottom: 0.5rem;
+}
+
+/* Report card export -- "Export to PDF" is just window.print() with the browser's own
+   Save as PDF destination, no PDF library needed. This is what makes that clean: strip the
+   site chrome and any on-page buttons, leave only the report content, on a plain white
+   background so it doesn't waste ink/toner printing the cream page background. */
+
+@media print {
+  .site-header,
+  .no-print {
+    display: none !important;
+  }
+
+  body,
+  .page {
+    background: #fff !important;
+  }
+
+  .report-card .card,
+  .report-card .tile {
+    box-shadow: none !important;
+    border-color: #ccc !important;
+  }
+}
