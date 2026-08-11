@@ -10,11 +10,33 @@ export default async function Inbox() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
-  const { data: hands } = await supabase
+  // Deliberately no embedded questions(subject) join here. questions has an RLS policy scoped
+  // to is_published = true -- if a thread's question is a draft (unpublished, still being
+  // written), Supabase's embed can't satisfy RLS on that side and silently drops the whole
+  // raised_hands row from the result, not just the subject. A student's own thread should never
+  // disappear from their own inbox because of the underlying question's publish state, so the
+  // subject is looked up separately below and merged in JS; a question that fails that lookup
+  // just falls back to "Question" instead of erasing the thread.
+  // Logged, not silently swallowed: a genuine query failure (RLS denial, transient error, a
+  // typo in a column name) and "you really have zero threads" both render as an empty array if
+  // the error is discarded, and they need different explanations to the student and different
+  // next steps for debugging. If this ever fires, the actual Postgres/PostgREST error message
+  // lands in Vercel's Runtime Logs for this route.
+  const { data: hands, error: handsError } = await supabase
     .from("raised_hands")
-    .select("id, status, created_at, archived_by_student, escalated_at, questions(subject)")
+    .select("id, status, created_at, archived_by_student, escalated_at, question_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+  if (handsError) {
+    console.error("[/inbox] failed to load raised_hands:", handsError);
+  }
+
+  const questionIds = Array.from(new Set((hands ?? []).map((h: any) => h.question_id).filter(Boolean)));
+  const { data: questionRows } =
+    questionIds.length > 0
+      ? await supabase.from("questions").select("id, subject").in("id", questionIds)
+      : { data: [] as any[] };
+  const subjectByQuestionId = new Map((questionRows ?? []).map((q: any) => [q.id, q.subject]));
 
   const handIds = (hands ?? []).map((h: any) => h.id);
   const { data: messages } =
@@ -28,7 +50,7 @@ export default async function Inbox() {
 
   const threads = (hands ?? []).map((h: any) => ({
     id: h.id,
-    subject: h.questions?.subject ?? "Question",
+    subject: subjectByQuestionId.get(h.question_id) ?? "Question",
     status: h.status as "open" | "resolved",
     createdAt: h.created_at,
     archived: h.archived_by_student as boolean,
@@ -44,10 +66,17 @@ export default async function Inbox() {
         an instructor usually gets back to you in 1 to 2 days. Nothing here goes to email.
       </p>
 
-      {threads.length === 0 && (
-        <p className="muted">
-          Nothing here yet. When you raise your hand on a question, it&apos;ll show up on this page.
+      {handsError ? (
+        <p className="error-text">
+          Something went wrong loading your inbox. Try refreshing; if it keeps happening, let an
+          instructor know.
         </p>
+      ) : (
+        threads.length === 0 && (
+          <p className="muted">
+            Nothing here yet. When you raise your hand on a question, it&apos;ll show up on this page.
+          </p>
+        )
       )}
 
       <InboxThreadList threads={threads} />
