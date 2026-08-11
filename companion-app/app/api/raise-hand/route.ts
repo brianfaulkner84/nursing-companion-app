@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   // source-checked or not.
   const auditCompletion = await getAnthropic().messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 300,
+    max_tokens: 500,
     messages: [{
       role: "user",
       content:
@@ -112,14 +112,23 @@ export async function POST(request: Request) {
   let confidenceReason = "Self-audit response could not be parsed; held for review as a precaution.";
   let emotionallyDistressed = false;
   try {
-    const parsed = JSON.parse(auditText);
+    // Haiku sometimes wraps the JSON in a ```json fence or adds a stray sentence before/after it
+    // despite being told not to -- pull out the first {...} block instead of requiring the whole
+    // response to be pure JSON, so a harmless wrapper doesn't trigger the fail-closed path below
+    // on every single call. Every recent audit was hitting that fallback, which meant nothing
+    // could ever auto-send regardless of category trust; this is the actual fix for that.
+    const jsonMatch = auditText.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : auditText);
     grounded = parsed.grounded === true;
     confidenceScore = Math.min(5, Math.max(1, Math.round(Number(parsed.confidence_score) || 1)));
     confidenceReason = String(parsed.confidence_reason || confidenceReason);
     emotionallyDistressed = parsed.emotionally_distressed === true;
   } catch {
     // Fail closed: an unparseable audit response is treated the same as "not grounded," which
-    // forces a hold in decideTier below, never an auto-send.
+    // forces a hold in decideTier below, never an auto-send. Logged so a repeat of this doesn't
+    // require blind guessing again -- the raw text is what actually tells you whether it was
+    // truncation, a markdown fence the regex above didn't catch, or something else entirely.
+    console.error("[/api/raise-hand] audit JSON parse failed, raw response:", auditText);
   }
 
   // The three signals decideTier needs beyond the audit itself: how much this subject has
