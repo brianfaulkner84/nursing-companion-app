@@ -43,7 +43,7 @@ export default async function Inbox() {
     handIds.length > 0
       ? await supabase
           .from("raised_hand_messages")
-          .select("id, raised_hand_id, sender, sender_id, body, created_at, is_acknowledgment")
+          .select("id, raised_hand_id, sender, sender_id, body, created_at, is_acknowledgment, is_checkin, reaction")
           .in("raised_hand_id", handIds)
           .order("created_at", { ascending: true })
       : { data: [] as any[] };
@@ -82,6 +82,8 @@ export default async function Inbox() {
       .map((m: any) => ({
         ...m,
         isAcknowledgment: m.is_acknowledgment as boolean,
+        isCheckin: m.is_checkin as boolean,
+        reaction: m.reaction as "up" | "down" | null,
         instructorLabel: m.sender === "instructor" ? instructorLabel(m) : null,
       })),
   }));

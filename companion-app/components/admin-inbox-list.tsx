@@ -13,6 +13,12 @@ type Message = {
   // not a real reply. Excluded from alreadyReplied below so a fresh hold thread still shows the
   // Claude-draft approve/edit flow instead of looking like it's already been personally answered.
   isAcknowledgment?: boolean;
+  // The "are you actually seeing these replies" check-in the app sends itself. See the
+  // engagement sweep in app/api/cron/raised-hand-reminder/route.ts.
+  isCheckin?: boolean;
+  // Student's thumbs up/down on this message, if any. A down is also what set the thread's
+  // escalated_at -- see app/api/raised-hand-messages/[id]/react/route.ts.
+  reaction?: "up" | "down" | null;
 };
 type Option = {
   id: string;
@@ -61,6 +67,24 @@ function OptionsList({ options }: { options: Option[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+// Small inline badge so a thumbs up/down a student left on a specific reply is visible right
+// where that reply sits, not something Brian has to go dig for. Checkin messages never carry a
+// reaction (nothing to react to), so this only ever renders on a real reply.
+function ReactionBadge({ reaction }: { reaction?: "up" | "down" | null }) {
+  if (!reaction) return null;
+  return (
+    <span
+      style={{
+        marginLeft: "0.5rem",
+        fontSize: "0.8rem",
+        color: reaction === "down" ? "var(--wine-600)" : "var(--sage-600)",
+      }}
+    >
+      {reaction === "up" ? "👍 helpful" : "👎 not helpful"}
+    </span>
   );
 }
 
@@ -236,8 +260,15 @@ export default function AdminInboxList({
                   <div key={m.id} className={`message-bubble ${m.sender === "instructor" ? "card-dark" : "card"}`}>
                     <div className="message-sender">
                       <span style={{ color: m.sender === "instructor" ? "var(--gold-100)" : "var(--sage-600)" }}>
-                        {m.sender === "instructor" ? (m.isAcknowledgment ? "Auto-sent while waiting" : "You") : "Student"}
+                        {m.sender === "instructor"
+                          ? m.isAcknowledgment
+                            ? "Auto-sent while waiting"
+                            : m.isCheckin
+                            ? "Check-in (auto-sent)"
+                            : "You"
+                          : "Student"}
                       </span>
+                      <ReactionBadge reaction={m.reaction} />
                     </div>
                     <p>{m.body}</p>
                   </div>
@@ -354,8 +385,13 @@ export default function AdminInboxList({
                 <div key={m.id} className={`message-bubble ${m.sender === "instructor" ? "card-dark" : "card"}`}>
                   <div className="message-sender">
                     <span style={{ color: m.sender === "instructor" ? "var(--gold-100)" : "var(--sage-600)" }}>
-                      {m.sender === "instructor" ? "AI (auto-sent)" : "Student"}
+                      {m.sender === "instructor"
+                        ? m.isCheckin
+                          ? "Check-in (auto-sent)"
+                          : "AI (auto-sent)"
+                        : "Student"}
                     </span>
+                    <ReactionBadge reaction={m.reaction} />
                   </div>
                   <p>{m.body}</p>
                 </div>
@@ -464,11 +500,16 @@ export default function AdminInboxList({
                   <div className="message-sender">
                     <span style={{ color: m.sender === "instructor" ? "var(--gold-100)" : "var(--sage-600)" }}>
                       {m.sender === "instructor"
-                        ? showInstructorNames
+                        ? m.isAcknowledgment
+                          ? "Auto-sent while waiting"
+                          : m.isCheckin
+                          ? "Check-in (auto-sent)"
+                          : showInstructorNames
                           ? m.instructorName ?? "Instructor"
                           : "You"
                         : "Student"}
                     </span>
+                    <ReactionBadge reaction={m.reaction} />
                   </div>
                   <p>{m.body}</p>
                 </div>

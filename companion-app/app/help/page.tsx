@@ -110,6 +110,14 @@ export default function Help() {
           answered ones show &quot;Answered&quot; and the full conversation so far. Keep
           replying from the same thread as long as you need to.
         </p>
+        <p>
+          Every reply has a 👍 / 👎 under it. Use it, it is the quickest way to tell us a
+          reply actually helped, or that something is wrong: a 👎 goes straight to an
+          instructor, the same as flagging used to. If a reply comes from someone at your own
+          school it is labeled <strong>Instructor</strong>; otherwise it is labeled{" "}
+          <strong>LPN Launchpad Instructor</strong>, so you always know where an answer came
+          from.
+        </p>
       </div>
 
       <div className="help-section">

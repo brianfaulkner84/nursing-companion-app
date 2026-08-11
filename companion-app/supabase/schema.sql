@@ -364,10 +364,10 @@ create table raised_hands (
   answered_at timestamptz,
   archived_by_instructor boolean not null default false,
   archived_by_student boolean not null default false,
-  -- Set when a student flags an AI-auto-sent reply as wrong via "Flag This Reply." Null means
-  -- not escalated. Only meaningful on a thread whose reply was auto-sent (tier high/low in
-  -- reply_audits) -- a held reply already requires a human before it ever reaches the student,
-  -- so there's nothing for the student to escalate on that path.
+  -- Set when a student gives a specific message in this thread a thumbs down (see
+  -- raised_hand_messages.reaction and app/api/raised-hand-messages/[id]/react/route.ts). Null
+  -- means not escalated. Can fire on any instructor-sent message, human-written or AI auto-sent,
+  -- not just tier high/low replies -- a bad reply is a bad reply regardless of who wrote it.
   escalated_at timestamptz
 );
 
@@ -388,9 +388,16 @@ create table raised_hand_messages (
   created_at timestamptz not null default now(),
   -- True for the canned "an instructor will follow up soon" note sent instantly when a thread
   -- lands on hold, distinct from a real AI-drafted clinical answer (sender_id null covers both,
-  -- this tells them apart so the UI doesn't show the AI disclosure/flag block on a status note
-  -- that has nothing clinical to flag).
-  is_acknowledgment boolean not null default false
+  -- this tells them apart so the UI doesn't show the AI disclosure/reaction block on a status
+  -- note that has nothing clinical to react to).
+  is_acknowledgment boolean not null default false,
+  -- Student's thumbs up/down on this specific message. A down reaction escalates the thread the
+  -- same way the old thread-level "Flag This Reply" button used to.
+  reaction text check (reaction in ('up', 'down')),
+  -- True for the "are you actually seeing these replies" check-in the app sends itself when a
+  -- student has several sent replies with no reaction on any of them. See the engagement sweep
+  -- in app/api/cron/raised-hand-reminder/route.ts.
+  is_checkin boolean not null default false
 );
 
 -- General in-app feedback (usability, bugs, suggestions) from a beta tester. No email
