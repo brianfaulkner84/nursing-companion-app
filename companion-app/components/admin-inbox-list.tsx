@@ -101,6 +101,11 @@ export default function AdminInboxList({
   const [clearing, setClearing] = useState(false);
   const [correctingId, setCorrectingId] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Record<string, string>>({});
+  // Same pattern as correctingId/corrections, for the "the AI was right, I just want to add
+  // more" case. Kept as a separate outcome from a correction so the trust ladder and the audit
+  // trail can tell "this was wrong" apart from "this was fine, here's extra context."
+  const [elaboratingId, setElaboratingId] = useState<string | null>(null);
+  const [elaborations, setElaborations] = useState<Record<string, string>>({});
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   // Which open thread (if any) currently has its draft unlocked for editing. Read-only by
   // default: a thread only enters this set when Brian deliberately clicks "Edit reply," not
@@ -150,10 +155,24 @@ export default function AdminInboxList({
     await fetch(`/api/reply-audits/${auditId}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ outcome: "corrected", correctionText: text }),
+      body: JSON.stringify({ outcome: "corrected", text }),
     });
     setReviewingId(null);
     setCorrectingId(null);
+    router.refresh();
+  }
+
+  async function submitElaboration(auditId: string) {
+    const text = elaborations[auditId];
+    if (!text?.trim()) return;
+    setReviewingId(auditId);
+    await fetch(`/api/reply-audits/${auditId}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ outcome: "elaborated", text }),
+    });
+    setReviewingId(null);
+    setElaboratingId(null);
     router.refresh();
   }
 
@@ -364,6 +383,28 @@ export default function AdminInboxList({
                     </button>
                   </div>
                 </>
+              ) : elaboratingId === t.id ? (
+                <>
+                  <textarea
+                    value={elaborations[t.auditId ?? ""] ?? ""}
+                    onChange={(e) => setElaborations((prev) => ({ ...prev, [t.auditId ?? ""]: e.target.value }))}
+                    rows={3}
+                    placeholder="Add more for the student. The original reply stays marked clean, this goes as a follow-up."
+                    style={{ margin: "0.5rem 0" }}
+                  />
+                  <div className="btn-row">
+                    <button
+                      onClick={() => t.auditId && submitElaboration(t.auditId)}
+                      disabled={reviewingId === t.auditId || !elaborations[t.auditId ?? ""]?.trim()}
+                      className="btn btn-primary"
+                    >
+                      {reviewingId === t.auditId ? "Sending..." : "Send elaboration"}
+                    </button>
+                    <button onClick={() => setElaboratingId(null)} className="btn btn-outline btn-small">
+                      Cancel
+                    </button>
+                  </div>
+                </>
               ) : (
                 <div className="btn-row" style={{ marginTop: "0.5rem" }}>
                   <button
@@ -372,6 +413,9 @@ export default function AdminInboxList({
                     className="btn btn-outline btn-small"
                   >
                     {reviewingId === t.auditId ? "..." : "Mark clean"}
+                  </button>
+                  <button onClick={() => setElaboratingId(t.id)} className="btn btn-outline btn-small">
+                    Elaborate
                   </button>
                   <button onClick={() => setCorrectingId(t.id)} className="btn btn-outline btn-small">
                     Correct

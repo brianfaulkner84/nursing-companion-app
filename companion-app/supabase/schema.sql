@@ -440,6 +440,13 @@ create table reply_audits (
   was_corrected boolean not null default false,
   correction_text text,
   corrected_by uuid references auth.users(id),
+  -- A third outcome, distinct from a correction: the AI's answer was accurate, the instructor
+  -- just wanted to add more for the student. Kept separate from correction_text/corrected_by
+  -- (which mean "this was wrong") so the audit trail can tell the two apart. Still counts as
+  -- clean for the category trust ladder.
+  was_elaborated boolean not null default false,
+  elaboration_text text,
+  elaborated_by uuid references auth.users(id),
   -- Null until admin marks this sent reply as clean or corrects it, from the Sent, Needs Review
   -- queue. That single action both clears the item from the queue and drives the category trust
   -- ladder update. Always null for a hold-tier row, since those go through the ordinary
