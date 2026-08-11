@@ -223,7 +223,7 @@ export default function AdminInboxList({
                 {hasDraft && !isEditing ? (
                   <>
                     <label style={{ display: "block", margin: "0.5rem 0 0.3rem", fontWeight: 600 }}>
-                      Claude's draft (read-only until you choose Edit)
+                      Claude&apos;s draft (read-only until you choose Edit)
                     </label>
                     <div
                       className="card-dark"

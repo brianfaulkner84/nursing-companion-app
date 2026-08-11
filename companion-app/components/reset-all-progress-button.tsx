@@ -34,7 +34,7 @@ export default function ResetAllProgressButton({ totalAnswered }: { totalAnswere
     <div className="card" style={{ borderColor: "var(--wine-600)", marginBottom: "1rem" }}>
       <p style={{ fontWeight: 600, marginBottom: "0.3rem" }}>Reset every subject?</p>
       <p className="muted" style={{ marginBottom: "0.75rem" }}>
-        This clears all {totalAnswered} question{totalAnswered === 1 ? "" : "s"} you've answered, across every
+        This clears all {totalAnswered} question{totalAnswered === 1 ? "" : "s"} you&apos;ve answered, across every
         subject. Every question goes back to unanswered. This cannot be undone.
       </p>
       <div className="btn-row">

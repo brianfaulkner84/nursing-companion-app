@@ -31,17 +31,25 @@ export default async function AdminInbox({
   // question stem. question_interactions(*) pulls every interaction on the question; raise-hand
   // is only ever raised against a single-interaction question today (same assumption the
   // raise-hand route itself makes), so withMessages below just takes interactions[0].
-  const optionsSelect =
-    "questions(subject, question_text, question_interactions(id, question_options(id, option_label, option_text, display_order), response_keys(choice_id)))";
-
+  //
+  // Each select() string below is written out in full as one literal, not built from a shared
+  // variable or template interpolation -- Supabase's TS types parse the select string at
+  // compile time to infer the result shape, and anything other than one plain literal collapses
+  // that inference to an untyped error type, which then fails every property access on the
+  // result (this broke the ai-assist route the same way; same fix here, just duplicated instead
+  // of shared).
   let openQuery = admin
     .from("raised_hands")
-    .select(`id, created_at, claude_draft_reply, selected_option_ids, ${optionsSelect}`)
+    .select(
+      "id, created_at, claude_draft_reply, selected_option_ids, questions(subject, question_text, question_interactions(id, question_options(id, option_label, option_text, display_order), response_keys(choice_id)))"
+    )
     .eq("status", "open")
     .order("created_at", { ascending: true });
   let resolvedQuery = admin
     .from("raised_hands")
-    .select(`id, created_at, answered_at, selected_option_ids, ${optionsSelect}`)
+    .select(
+      "id, created_at, answered_at, selected_option_ids, questions(subject, question_text, question_interactions(id, question_options(id, option_label, option_text, display_order), response_keys(choice_id)))"
+    )
     .eq("status", "resolved")
     .eq("archived_by_instructor", false)
     .order("answered_at", { ascending: false });

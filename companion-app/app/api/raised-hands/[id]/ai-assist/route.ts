@@ -24,11 +24,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const admin = createAdminClient();
+  // The select string has to be a single literal, not built with `+` or template
+  // interpolation -- Supabase's TS types parse the select string at compile time to infer the
+  // result shape, and anything other than one plain literal collapses that inference to an
+  // untyped error type instead, which then makes every property access below fail to compile.
   const { data: hand } = await admin
     .from("raised_hands")
     .select(
-      "strategy_snapshot, rationale_snapshot, student_note, claude_draft_reply, selected_option_ids, " +
-        "questions(question_text, question_interactions(question_options(id, option_label, option_text, display_order), response_keys(choice_id)))"
+      "strategy_snapshot, rationale_snapshot, student_note, claude_draft_reply, selected_option_ids, questions(question_text, question_interactions(question_options(id, option_label, option_text, display_order), response_keys(choice_id)))"
     )
     .eq("id", params.id)
     .single();
