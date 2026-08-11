@@ -385,7 +385,12 @@ create table raised_hand_messages (
   -- than one instructor exists.
   sender_id uuid references auth.users(id),
   body text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- True for the canned "an instructor will follow up soon" note sent instantly when a thread
+  -- lands on hold, distinct from a real AI-drafted clinical answer (sender_id null covers both,
+  -- this tells them apart so the UI doesn't show the AI disclosure/flag block on a status note
+  -- that has nothing clinical to flag).
+  is_acknowledgment boolean not null default false
 );
 
 -- General in-app feedback (usability, bugs, suggestions) from a beta tester. No email

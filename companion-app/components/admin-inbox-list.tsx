@@ -9,6 +9,10 @@ type Message = {
   body: string;
   created_at: string;
   instructorName?: string | null;
+  // The canned "an instructor will follow up" note sent instantly when a thread lands on hold,
+  // not a real reply. Excluded from alreadyReplied below so a fresh hold thread still shows the
+  // Claude-draft approve/edit flow instead of looking like it's already been personally answered.
+  isAcknowledgment?: boolean;
 };
 type Option = {
   id: string;
@@ -87,7 +91,7 @@ export default function AdminInboxList({
   const [drafts, setDrafts] = useState<Record<string, string>>(
     Object.fromEntries(
       openThreads.map((t) => {
-        const alreadyReplied = t.messages.some((m) => m.sender === "instructor");
+        const alreadyReplied = t.messages.some((m) => m.sender === "instructor" && !m.isAcknowledgment);
         return [t.id, alreadyReplied ? "" : t.claudeDraftReply ?? ""];
       })
     )
@@ -195,7 +199,7 @@ export default function AdminInboxList({
       ) : (
         <div className="tile-stack" style={{ marginBottom: "1.75rem" }}>
           {openThreads.map((t) => {
-            const alreadyReplied = t.messages.some((m) => m.sender === "instructor");
+            const alreadyReplied = t.messages.some((m) => m.sender === "instructor" && !m.isAcknowledgment);
             const hasDraft = !alreadyReplied && !!t.claudeDraftReply;
             const isEditing = editingId === t.id;
             return (
@@ -213,7 +217,7 @@ export default function AdminInboxList({
                   <div key={m.id} className={`message-bubble ${m.sender === "instructor" ? "card-dark" : "card"}`}>
                     <div className="message-sender">
                       <span style={{ color: m.sender === "instructor" ? "var(--gold-100)" : "var(--sage-600)" }}>
-                        {m.sender === "instructor" ? "You" : "Student"}
+                        {m.sender === "instructor" ? (m.isAcknowledgment ? "Auto-sent while waiting" : "You") : "Student"}
                       </span>
                     </div>
                     <p>{m.body}</p>

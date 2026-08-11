@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import InboxThreadList from "@/components/inbox-thread-list";
 
 export const dynamic = "force-dynamic";
@@ -43,10 +43,32 @@ export default async function Inbox() {
     handIds.length > 0
       ? await supabase
           .from("raised_hand_messages")
-          .select("id, raised_hand_id, sender, sender_id, body, created_at")
+          .select("id, raised_hand_id, sender, sender_id, body, created_at, is_acknowledgment")
           .in("raised_hand_id", handIds)
           .order("created_at", { ascending: true })
       : { data: [] as any[] };
+
+  // Tell the student apart a reply from their own school's instructor versus LPN Launchpad in
+  // general (AI auto-sent replies, the hold acknowledgment, or an admin/instructor answering
+  // outside their own school -- admin can answer any school's threads). profiles RLS only lets a
+  // user read their own row, so looking up another sender's school_id needs the admin client;
+  // everything else on this page stays on the regular RLS-scoped client.
+  const { data: myProfile } = await supabase.from("profiles").select("school_id").eq("id", user.id).maybeSingle();
+  const admin = createAdminClient();
+  const senderIds = Array.from(
+    new Set((messages ?? []).filter((m: any) => m.sender === "instructor" && m.sender_id).map((m: any) => m.sender_id as string))
+  );
+  const { data: senderProfiles } =
+    senderIds.length > 0 ? await admin.from("profiles").select("id, school_id").in("id", senderIds) : { data: [] as any[] };
+  const schoolIdBySenderId = new Map((senderProfiles ?? []).map((p: any) => [p.id, p.school_id]));
+
+  function instructorLabel(m: any): string {
+    if (!m.sender_id) return "LPN Launchpad Instructor";
+    const senderSchoolId = schoolIdBySenderId.get(m.sender_id);
+    return senderSchoolId && myProfile?.school_id && senderSchoolId === myProfile.school_id
+      ? "Instructor"
+      : "LPN Launchpad Instructor";
+  }
 
   const threads = (hands ?? []).map((h: any) => ({
     id: h.id,
@@ -55,7 +77,13 @@ export default async function Inbox() {
     createdAt: h.created_at,
     archived: h.archived_by_student as boolean,
     escalatedAt: h.escalated_at as string | null,
-    messages: (messages ?? []).filter((m: any) => m.raised_hand_id === h.id),
+    messages: (messages ?? [])
+      .filter((m: any) => m.raised_hand_id === h.id)
+      .map((m: any) => ({
+        ...m,
+        isAcknowledgment: m.is_acknowledgment as boolean,
+        instructorLabel: m.sender === "instructor" ? instructorLabel(m) : null,
+      })),
   }));
 
   return (

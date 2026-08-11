@@ -153,7 +153,7 @@ export async function POST(request: Request) {
     .eq("question_id", questionId)
     .eq("user_id", user.id);
 
-  const tier = decideTier({
+  const { tier, holdReason } = decideTier({
     grounded,
     categoryTier,
     openFlagCount: openFlagCount ?? 0,
@@ -219,6 +219,26 @@ export async function POST(request: Request) {
       sender: "instructor",
       sender_id: null,
       body: draftReply,
+    });
+  } else {
+    // A held thread used to sit in total silence until an instructor got to it -- nothing sent,
+    // nothing in the student's inbox but their own note, for however long the review queue took.
+    // This sends an immediate, honest placeholder instead: not Claude's specific (unverified,
+    // that's the whole reason it's holding) answer, just an acknowledgment that someone's coming.
+    // A distressed note gets a warmer, personal version, not the same "good question" framing
+    // used for an ordinary content hold. is_acknowledgment marks this as a status note, not a
+    // clinical answer, so the UI doesn't attach the AI-answer disclosure/flag block to it.
+    const ackBody =
+      holdReason === "distressed"
+        ? "Thanks for sending this over. An instructor is going to look at it personally and get back to you soon."
+        : "Good question. This one needs an instructor's eyes before a full answer goes out, so hang tight, you'll hear back soon.";
+    await admin.from("raised_hand_messages").insert({
+      raised_hand_id: inserted.id,
+      user_id: user.id,
+      sender: "instructor",
+      sender_id: null,
+      body: ackBody,
+      is_acknowledgment: true,
     });
   }
 

@@ -5,6 +5,13 @@
 
 export type Tier = "hold" | "high" | "low";
 
+// Why a reply landed on hold, distinct from the tier itself. Drives which acknowledgment the
+// student sees immediately (see app/api/raise-hand/route.ts): a distressed note gets a warmer,
+// personal message instead of the default "an instructor needs to look at this" one. Not
+// surfaced anywhere else right now, but keeping the reason around rather than collapsing
+// everything into a bare "hold" makes that distinction possible without re-deriving it.
+export type HoldReason = "not_grounded" | "content_flagged" | "distressed" | "repeat" | "untrusted";
+
 export function decideTier(input: {
   // Did the draft stay inside the question's stored rationale/strategy, or did it have to
   // extend past what's already vetted for this exact question? An ungrounded draft always
@@ -30,13 +37,14 @@ export function decideTier(input: {
   // same question is a live signal something isn't landing; hold rather than let the AI take a
   // second unsupervised swing.
   isRepeat: boolean;
-}): Tier {
-  if (!input.grounded) return "hold";
-  if (input.questionContentStatus !== "live") return "hold";
-  if (input.openFlagCount > 0) return "hold";
-  if (input.emotionallyDistressed) return "hold";
-  if (input.isRepeat) return "hold";
-  return input.categoryTier;
+}): { tier: Tier; holdReason: HoldReason | null } {
+  if (!input.grounded) return { tier: "hold", holdReason: "not_grounded" };
+  if (input.questionContentStatus !== "live") return { tier: "hold", holdReason: "content_flagged" };
+  if (input.openFlagCount > 0) return { tier: "hold", holdReason: "content_flagged" };
+  if (input.emotionallyDistressed) return { tier: "hold", holdReason: "distressed" };
+  if (input.isRepeat) return { tier: "hold", holdReason: "repeat" };
+  if (input.categoryTier === "hold") return { tier: "hold", holdReason: "untrusted" };
+  return { tier: input.categoryTier, holdReason: null };
 }
 
 // Category trust ladder movement. Called after an admin/instructor reviews a sent reply as

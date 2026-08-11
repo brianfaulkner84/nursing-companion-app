@@ -89,7 +89,7 @@ export default async function AdminInbox({
     allIds.length > 0
       ? await admin
           .from("raised_hand_messages")
-          .select("id, raised_hand_id, sender, sender_id, body, created_at")
+          .select("id, raised_hand_id, sender, sender_id, body, created_at, is_acknowledgment")
           .in("raised_hand_id", allIds)
           .order("created_at", { ascending: true })
       : { data: [] as any[] };
@@ -141,6 +141,7 @@ export default async function AdminInbox({
           .filter((m: any) => m.raised_hand_id === h.id)
           .map((m: any) => ({
             ...m,
+            isAcknowledgment: m.is_acknowledgment as boolean,
             instructorName: m.sender === "instructor" && m.sender_id ? instructorNames.get(m.sender_id) ?? null : null,
           })),
       };
