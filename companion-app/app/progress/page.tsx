@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/fetch-all";
 import ResetSubjectButton from "@/components/reset-subject-button";
+import ResetAllProgressButton from "@/components/reset-all-progress-button";
 
 export default async function Progress() {
   const supabase = createClient();
@@ -28,13 +29,23 @@ export default async function Progress() {
     const ids = questions.filter((q) => q.subject === subject).map((q) => q.id);
     const attempted = ids.filter((id) => attemptsByQuestion.has(id));
     const correct = attempted.filter((id) => attemptsByQuestion.get(id)).length;
-    const masteryPercent = attempted.length > 0 ? Math.round((correct / attempted.length) * 100) : 0;
+    // Mastery is against the whole subject, not just what's been attempted so far -- correct
+    // divided by total questions in the subject, not correct divided by attempted. Attempted-only
+    // accuracy let one lucky early answer show as "100% mastery" on a 226-question subject the
+    // student had barely touched, with a fully-filled bar to match. That's a legitimate accuracy
+    // number, just not what a mastery bar should mean.
+    const masteryPercent = ids.length > 0 ? Math.round((correct / ids.length) * 100) : 0;
     return { subject, masteryPercent, attempted: attempted.length, total: ids.length };
   });
 
   return (
     <div>
       <h1>Progress</h1>
+      {attemptsByQuestion.size > 0 && (
+        <div style={{ marginBottom: "1rem" }}>
+          <ResetAllProgressButton totalAnswered={attemptsByQuestion.size} />
+        </div>
+      )}
       {rows.length === 0 && <p className="muted">No questions published yet.</p>}
       {rows.map((r) => (
         <div key={r.subject} className="card" style={{ marginBottom: "0.75rem" }}>

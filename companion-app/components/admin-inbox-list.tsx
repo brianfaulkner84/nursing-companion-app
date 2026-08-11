@@ -63,6 +63,14 @@ export default function AdminInboxList({
   const [correctingId, setCorrectingId] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  // Which open thread (if any) currently has its draft unlocked for editing. Read-only by
+  // default: a thread only enters this set when Brian deliberately clicks "Edit reply," not
+  // just by scrolling past or clicking into the card to read it. This exists because sending an
+  // untouched draft versus an edited one isn't just cosmetic -- /api/raised-hands/[id]/respond
+  // compares the sent text to claude_draft_reply character-for-character to decide whether that
+  // review counts as "clean" or "corrected" for the subject's trust ladder. A stray space typed
+  // while reading would silently record a correction that never happened.
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   async function markClean(auditId: string) {
     setReviewingId(auditId);
@@ -89,13 +97,13 @@ export default function AdminInboxList({
     router.refresh();
   }
 
-  async function send(id: string) {
+  async function send(id: string, replyText: string) {
     setSendingId(id);
     setErrorId(null);
     const res = await fetch(`/api/raised-hands/${id}/respond`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reply: drafts[id] }),
+      body: JSON.stringify({ reply: replyText }),
     });
     setSendingId(null);
     if (res.ok) {
@@ -103,6 +111,17 @@ export default function AdminInboxList({
     } else {
       setErrorId(id);
     }
+  }
+
+  function startEdit(id: string) {
+    setEditingId(id);
+  }
+
+  // Discards whatever was typed and snaps the textarea back to Claude's original draft, so
+  // backing out of an edit can't leave a half-changed draft sitting around unsent.
+  function cancelEdit(id: string, originalDraft: string) {
+    setDrafts((prev) => ({ ...prev, [id]: originalDraft }));
+    setEditingId(null);
   }
 
   async function clearReplied() {
@@ -121,6 +140,8 @@ export default function AdminInboxList({
         <div className="tile-stack" style={{ marginBottom: "1.75rem" }}>
           {openThreads.map((t) => {
             const alreadyReplied = t.messages.some((m) => m.sender === "instructor");
+            const hasDraft = !alreadyReplied && !!t.claudeDraftReply;
+            const isEditing = editingId === t.id;
             return (
               <div
                 key={t.id}
@@ -142,23 +163,62 @@ export default function AdminInboxList({
                   </div>
                 ))}
 
-                <label style={{ display: "block", margin: "0.5rem 0 0.3rem", fontWeight: 600 }}>
-                  Reply{!alreadyReplied && t.claudeDraftReply ? " (Claude's draft, edit before sending)" : ""}
-                </label>
-                <textarea
-                  value={drafts[t.id] ?? ""}
-                  onChange={(e) => setDrafts((prev) => ({ ...prev, [t.id]: e.target.value }))}
-                  rows={4}
-                  style={{ marginBottom: "0.5rem" }}
-                />
-                {errorId === t.id && <p className="error-text">Something went wrong. Try again.</p>}
-                <button
-                  onClick={() => send(t.id)}
-                  disabled={sendingId === t.id || !drafts[t.id]?.trim()}
-                  className="btn btn-primary"
-                >
-                  {sendingId === t.id ? "Sending..." : "Send reply"}
-                </button>
+                {hasDraft && !isEditing ? (
+                  <>
+                    <label style={{ display: "block", margin: "0.5rem 0 0.3rem", fontWeight: 600 }}>
+                      Claude's draft (read-only until you choose Edit)
+                    </label>
+                    <div
+                      className="card-dark"
+                      style={{ padding: "0.6rem 0.75rem", marginBottom: "0.5rem", whiteSpace: "pre-wrap" }}
+                    >
+                      {t.claudeDraftReply}
+                    </div>
+                    {errorId === t.id && <p className="error-text">Something went wrong. Try again.</p>}
+                    <div className="btn-row">
+                      <button
+                        onClick={() => send(t.id, (t.claudeDraftReply ?? "").trim())}
+                        disabled={sendingId === t.id}
+                        className="btn btn-primary"
+                      >
+                        {sendingId === t.id ? "Sending..." : "Approve & send as-is"}
+                      </button>
+                      <button onClick={() => startEdit(t.id)} className="btn btn-outline btn-small">
+                        Edit reply
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <label style={{ display: "block", margin: "0.5rem 0 0.3rem", fontWeight: 600 }}>
+                      Reply{hasDraft ? " (editing Claude's draft)" : ""}
+                    </label>
+                    <textarea
+                      value={drafts[t.id] ?? ""}
+                      onChange={(e) => setDrafts((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                      rows={4}
+                      style={{ marginBottom: "0.5rem" }}
+                    />
+                    {errorId === t.id && <p className="error-text">Something went wrong. Try again.</p>}
+                    <div className="btn-row">
+                      <button
+                        onClick={() => send(t.id, (drafts[t.id] ?? "").trim())}
+                        disabled={sendingId === t.id || !drafts[t.id]?.trim()}
+                        className="btn btn-primary"
+                      >
+                        {sendingId === t.id ? "Sending..." : hasDraft ? "Send edited reply" : "Send reply"}
+                      </button>
+                      {hasDraft && (
+                        <button
+                          onClick={() => cancelEdit(t.id, t.claudeDraftReply ?? "")}
+                          className="btn btn-outline btn-small"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}

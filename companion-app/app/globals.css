@@ -329,6 +329,17 @@ a {
   border-color: var(--olive-900);
 }
 
+.btn-danger {
+  background: var(--cream-50);
+  color: var(--wine-600);
+  border: 1.5px solid var(--wine-600);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--wine-600);
+  color: var(--cream-50);
+}
+
 .btn-small {
   width: auto;
   display: inline-block;

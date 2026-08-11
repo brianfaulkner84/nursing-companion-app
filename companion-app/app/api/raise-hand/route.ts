@@ -74,6 +74,8 @@ export async function POST(request: Request) {
         `Student's selected answer(s): ${selectedOptions.map((o: any) => o.option_label).join(", ")}\n` +
         `Student's note: ${note || "(no note provided)"}\n\n` +
         `Write a short reply (3 to 6 sentences) addressing their specific confusion, not just repeating the rationale. ` +
+        `Do not reference lecture notes, "our unit," a specific textbook, page number, or any other course material as if you know what the student's class covered. ` +
+        `You only know what's given above; do not imply a personal teaching relationship or shared class history that isn't in this prompt. ` +
         `Plain text only: no Markdown, no headers, no asterisks for bold or italics, no bullet points. ` +
         `Write it exactly as it should appear to the student, since it is shown as-is with no formatting applied.`,
     }],
@@ -106,6 +108,7 @@ export async function POST(request: Request) {
         `Draft reply: ${draftReply}\n\n` +
         `Return this exact JSON shape: {"grounded": boolean, "confidence_score": number (1-5), "confidence_reason": string (one sentence), "emotionally_distressed": boolean}. ` +
         `"grounded" is true only if the draft reply's content is fully supported by the strategy and rationale given above, with nothing added that isn't already there. ` +
+        `This includes claimed sources: if the reply references lecture notes, "our unit," a specific textbook, or any other course material as if it knows what the student's class covered, that is not grounded, even if the underlying clinical fact happens to be correct, since nothing in this prompt gave it that context. ` +
         `"emotionally_distressed" is about the student's note, not the reply: true if the note reads as hopeless, overwhelmed, or questioning whether they belong in the program, not just ordinary confusion about the question.`,
     }],
   });
