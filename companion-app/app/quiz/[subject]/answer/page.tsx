@@ -74,7 +74,10 @@ export default async function AnswerBreakdown({
 
       <div className="btn-row" style={{ marginTop: "1rem" }}>
         <Link href={`/quiz/${encodeURIComponent(subject)}`} className="btn btn-primary">Next question</Link>
-        <Link href={`/raise-hand?question=${question.id}&selected=${selectedIds.join(",")}`} className="btn btn-secondary">
+        <Link
+          href={`/raise-hand?question=${question.id}&selected=${selectedIds.join(",")}&next=${encodeURIComponent(`/quiz/${encodeURIComponent(subject)}`)}&answer=${encodeURIComponent(`/quiz/${encodeURIComponent(subject)}/answer?question=${question.id}&selected=${selectedIds.join(",")}`)}`}
+          className="btn btn-secondary"
+        >
           Raise your hand
         </Link>
       </div>

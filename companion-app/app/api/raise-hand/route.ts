@@ -1,18 +1,8 @@
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { decideTier } from "@/lib/tier";
-
-// Lazily constructed, not a top-level `new Anthropic(...)`: Next.js imports every API route
-// module at build time to collect page data, before Vercel secrets are necessarily set, and
-// an eagerly-constructed client with a missing key can throw right then and take the whole
-// build down (this happened to the Stripe client, see lib/stripe.ts).
-let cached: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!cached) cached = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return cached;
-}
+import { getAnthropic, NO_FABRICATED_CONTEXT_INSTRUCTION } from "@/lib/anthropic";
 
 export async function POST(request: Request) {
   const { questionId, selected, note } = await request.json();
@@ -74,8 +64,7 @@ export async function POST(request: Request) {
         `Student's selected answer(s): ${selectedOptions.map((o: any) => o.option_label).join(", ")}\n` +
         `Student's note: ${note || "(no note provided)"}\n\n` +
         `Write a short reply (3 to 6 sentences) addressing their specific confusion, not just repeating the rationale. ` +
-        `Do not reference lecture notes, "our unit," a specific textbook, page number, or any other course material as if you know what the student's class covered. ` +
-        `You only know what's given above; do not imply a personal teaching relationship or shared class history that isn't in this prompt. ` +
+        `${NO_FABRICATED_CONTEXT_INSTRUCTION} ` +
         `Plain text only: no Markdown, no headers, no asterisks for bold or italics, no bullet points. ` +
         `Write it exactly as it should appear to the student, since it is shown as-is with no formatting applied.`,
     }],

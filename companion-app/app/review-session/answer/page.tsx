@@ -80,7 +80,10 @@ export default async function ReviewSessionAnswer({
 
       <div className="btn-row" style={{ marginTop: "1rem" }}>
         <Link href={backHref} className="btn btn-primary">Next question</Link>
-        <Link href={`/raise-hand?question=${question.id}&selected=${selectedIds.join(",")}`} className="btn btn-secondary">
+        <Link
+          href={`/raise-hand?question=${question.id}&selected=${selectedIds.join(",")}&next=${encodeURIComponent(backHref)}&answer=${encodeURIComponent(`/review-session/answer?question=${questionId}&selected=${selectedIds.join(",")}&${returnParams}`)}`}
+          className="btn btn-secondary"
+        >
           Raise your hand
         </Link>
       </div>

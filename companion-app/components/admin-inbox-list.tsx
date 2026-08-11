@@ -10,10 +10,18 @@ type Message = {
   created_at: string;
   instructorName?: string | null;
 };
+type Option = {
+  id: string;
+  label: string;
+  text: string;
+  correct: boolean;
+  selected: boolean;
+};
 type Thread = {
   id: string;
   subject: string;
   questionText: string;
+  options: Option[];
   claudeDraftReply?: string | null;
   // Tiered AI reply review (MNGT 745 Week 6 capstone): only set on threads whose reply came
   // through the audited raise-hand pipeline. auditId is what the review action targets.
@@ -24,6 +32,33 @@ type Thread = {
   confidenceReason?: string | null;
   messages: Message[];
 };
+
+// The full multiple-choice picture next to a reply under review: every option, which one is
+// actually correct, and which one the student picked -- not just the question stem and the
+// draft. Green marks the correct answer, wine marks a wrong option the student picked, so a
+// wrong-and-selected option (the usual case someone raises their hand over) stands out at a
+// glance without reading every line.
+function OptionsList({ options }: { options: Option[] }) {
+  if (options.length === 0) return null;
+  return (
+    <ul style={{ margin: "0 0 0.6rem", paddingLeft: "1.1rem", fontSize: "0.85rem" }}>
+      {options.map((o) => (
+        <li
+          key={o.id}
+          style={{
+            color: o.correct ? "var(--sage-600)" : o.selected ? "var(--wine-600)" : undefined,
+            fontWeight: o.correct || o.selected ? 600 : 400,
+          }}
+        >
+          {o.label}. {o.text}
+          {o.correct && o.selected && " (correct — student's answer)"}
+          {o.correct && !o.selected && " (correct answer)"}
+          {!o.correct && o.selected && " (student's answer)"}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function AdminInboxList({
   openThreads,
@@ -71,6 +106,27 @@ export default function AdminInboxList({
   // review counts as "clean" or "corrected" for the subject's trust ladder. A stray space typed
   // while reading would silently record a correction that never happened.
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Free-form instruction text per thread ("make this shorter," "explain why C is wrong") for
+  // the AI-assist rewrite, and which thread (if any) currently has a rewrite in flight.
+  const [aiInstructions, setAiInstructions] = useState<Record<string, string>>({});
+  const [aiAssistingId, setAiAssistingId] = useState<string | null>(null);
+
+  async function reviseWithAi(id: string) {
+    const instruction = aiInstructions[id];
+    if (!instruction?.trim()) return;
+    setAiAssistingId(id);
+    const res = await fetch(`/api/raised-hands/${id}/ai-assist`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instruction, currentDraft: drafts[id] }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setDrafts((prev) => ({ ...prev, [id]: data.reply }));
+      setAiInstructions((prev) => ({ ...prev, [id]: "" }));
+    }
+    setAiAssistingId(null);
+  }
 
   async function markClean(auditId: string) {
     setReviewingId(auditId);
@@ -150,7 +206,8 @@ export default function AdminInboxList({
                 style={t.id === highlightId ? { outline: "3px solid var(--gold-100)", outlineOffset: "2px" } : undefined}
               >
                 <p className="tile-title" style={{ marginBottom: "0.3rem" }}>{t.subject}</p>
-                <p className="tile-meta" style={{ marginBottom: "0.6rem" }}>{t.questionText}</p>
+                <p className="tile-meta" style={{ marginBottom: "0.4rem" }}>{t.questionText}</p>
+                <OptionsList options={t.options} />
 
                 {t.messages.map((m) => (
                   <div key={m.id} className={`message-bubble ${m.sender === "instructor" ? "card-dark" : "card"}`}>
@@ -199,6 +256,27 @@ export default function AdminInboxList({
                       rows={4}
                       style={{ marginBottom: "0.5rem" }}
                     />
+
+                    <label style={{ display: "block", marginBottom: "0.3rem", fontWeight: 600, fontSize: "0.85rem" }}>
+                      AI assist: tell Claude how to revise this reply
+                    </label>
+                    <div className="btn-row" style={{ marginBottom: "0.5rem", alignItems: "flex-start" }}>
+                      <input
+                        type="text"
+                        value={aiInstructions[t.id] ?? ""}
+                        onChange={(e) => setAiInstructions((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                        placeholder='e.g. "make this shorter" or "explain why option C is wrong"'
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        onClick={() => reviseWithAi(t.id)}
+                        disabled={aiAssistingId === t.id || !aiInstructions[t.id]?.trim()}
+                        className="btn btn-outline btn-small"
+                      >
+                        {aiAssistingId === t.id ? "Revising..." : "Revise with AI"}
+                      </button>
+                    </div>
+
                     {errorId === t.id && <p className="error-text">Something went wrong. Try again.</p>}
                     <div className="btn-row">
                       <button
@@ -244,6 +322,7 @@ export default function AdminInboxList({
                 </span>
               </div>
               <p className="tile-meta" style={{ marginBottom: "0.4rem" }}>{t.questionText}</p>
+              <OptionsList options={t.options} />
               <p className="muted" style={{ fontSize: "0.85rem", marginBottom: "0.6rem" }}>
                 Confidence {t.confidenceScore}/5 &middot; {t.confidenceReason}
               </p>
@@ -323,7 +402,15 @@ export default function AdminInboxList({
               className="card"
               style={t.id === highlightId ? { outline: "3px solid var(--gold-100)", outlineOffset: "2px" } : undefined}
             >
-              <p className="tile-title" style={{ marginBottom: "0.5rem" }}>{t.subject}</p>
+              <p className="tile-title" style={{ marginBottom: "0.3rem" }}>{t.subject}</p>
+              {t.options.length > 0 && (
+                <details style={{ marginBottom: "0.5rem" }}>
+                  <summary style={{ cursor: "pointer", fontSize: "0.8rem", color: "var(--sage-600)" }}>
+                    Answer options
+                  </summary>
+                  <OptionsList options={t.options} />
+                </details>
+              )}
               {t.messages.map((m) => (
                 <div key={m.id} className={`message-bubble ${m.sender === "instructor" ? "card-dark" : "card"}`}>
                   <div className="message-sender">

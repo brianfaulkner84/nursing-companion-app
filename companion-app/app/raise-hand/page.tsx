@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 export default function RaiseHand() {
@@ -15,6 +16,13 @@ function RaiseHandForm() {
   const searchParams = useSearchParams();
   const questionId = searchParams.get("question");
   const selected = searchParams.get("selected");
+  // Where to send the student once they're done here. Both callers (the quiz answer breakdown
+  // and the review-session answer breakdown) pass their own "next question" href and their own
+  // URL back to this exact answer breakdown, since raise-hand itself has no idea which flow
+  // launched it or what subject/session it belongs to. Falls back to /dashboard so a stray link
+  // missing these params still lands the student somewhere navigable instead of a dead end.
+  const nextHref = searchParams.get("next") || "/dashboard";
+  const answerHref = searchParams.get("answer");
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
@@ -30,8 +38,20 @@ function RaiseHandForm() {
 
   if (status === "sent") {
     return (
-      <div className="banner banner-correct" style={{ textTransform: "none", fontWeight: 500 }}>
-        Sent. An instructor will reply in your Inbox, usually within a day or two.
+      <div>
+        <div className="banner banner-correct" style={{ textTransform: "none", fontWeight: 500 }}>
+          Sent. An instructor will reply in your Inbox, usually within a day or two.
+        </div>
+        <div className="btn-row" style={{ marginTop: "1rem" }}>
+          {answerHref && (
+            <Link href={answerHref} className="btn btn-outline">
+              Back to this question
+            </Link>
+          )}
+          <Link href={nextHref} className="btn btn-primary">
+            Next question
+          </Link>
+        </div>
       </div>
     );
   }

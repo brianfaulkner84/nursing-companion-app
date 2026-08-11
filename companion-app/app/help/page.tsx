@@ -88,9 +88,17 @@ export default function Help() {
       <div className="help-section">
         <h2>6. Progress</h2>
         <p>
-          Shows your mastery percentage per subject, based on the questions you&apos;ve actually
-          answered. If you want a clean slate on a subject, you can reset just that subject&apos;s
-          progress without touching the rest.
+          Shows your mastery percentage per subject: how many of that subject&apos;s questions
+          you&apos;ve gotten right out of the total in that subject, not just out of the ones
+          you&apos;ve tried so far. Answering a handful of questions correctly won&apos;t show
+          100% on a subject with hundreds of questions still unanswered, the bar reflects real
+          coverage of the whole subject.
+        </p>
+        <p>
+          Each subject has its own <strong>Reset progress</strong> button if you want a clean
+          slate on just that one. A <strong>Reset all progress</strong> button at the top of the
+          page clears every subject at once, it asks you to confirm before it clears anything,
+          since it can&apos;t be undone.
         </p>
       </div>
 

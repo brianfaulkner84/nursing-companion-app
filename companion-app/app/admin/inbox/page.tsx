@@ -25,14 +25,23 @@ export default async function AdminInbox({
   const studentIds = viewer.role === "instructor" ? await getSchoolUserIds(admin, viewer.schoolId) : null;
   const noStudents = studentIds !== null && studentIds.length === 0;
 
+  // Question options come along on every query now, not just the draft/rationale text -- Brian
+  // wants the full multiple-choice picture (every option, which one Claude marked correct,
+  // which one the student picked) visible next to the reply he's reviewing, not just the
+  // question stem. question_interactions(*) pulls every interaction on the question; raise-hand
+  // is only ever raised against a single-interaction question today (same assumption the
+  // raise-hand route itself makes), so withMessages below just takes interactions[0].
+  const optionsSelect =
+    "questions(subject, question_text, question_interactions(id, question_options(id, option_label, option_text, display_order), response_keys(choice_id)))";
+
   let openQuery = admin
     .from("raised_hands")
-    .select("id, created_at, claude_draft_reply, questions(subject, question_text)")
+    .select(`id, created_at, claude_draft_reply, selected_option_ids, ${optionsSelect}`)
     .eq("status", "open")
     .order("created_at", { ascending: true });
   let resolvedQuery = admin
     .from("raised_hands")
-    .select("id, created_at, answered_at, questions(subject, question_text)")
+    .select(`id, created_at, answered_at, selected_option_ids, ${optionsSelect}`)
     .eq("status", "resolved")
     .eq("archived_by_instructor", false)
     .order("answered_at", { ascending: false });
@@ -95,10 +104,25 @@ export default async function AdminInbox({
   function withMessages(hands: any[]) {
     return hands.map((h) => {
       const audit = auditByHandId.get(h.id);
+      const interaction = (h.questions?.question_interactions ?? [])[0];
+      const correctIds = new Set(
+        (interaction?.response_keys ?? []).map((k: any) => k.choice_id).filter(Boolean)
+      );
+      const selectedIds = new Set(h.selected_option_ids ?? []);
+      const options = [...(interaction?.question_options ?? [])]
+        .sort((a: any, b: any) => a.display_order - b.display_order)
+        .map((o: any) => ({
+          id: o.id,
+          label: o.option_label,
+          text: o.option_text,
+          correct: correctIds.has(o.id),
+          selected: selectedIds.has(o.id),
+        }));
       return {
         id: h.id,
         subject: h.questions?.subject ?? "Question",
         questionText: h.questions?.question_text ?? "",
+        options,
         claudeDraftReply: h.claude_draft_reply ?? null,
         auditId: audit?.id ?? null,
         tier: audit?.tier ?? null,
